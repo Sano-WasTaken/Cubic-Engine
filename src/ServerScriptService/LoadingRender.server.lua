@@ -22,7 +22,11 @@ WorldManager.BlockRemoved:Connect(function(block)
 	CustomStats:IncrementStat("BlockCreated", -1)
 end)
 
-local chunks = WorldManager.getChunks()
+local chunks = WorldManager:GetChunks()
+
+task.wait(5) --// Wait a few seconds for nothing, just let the game load itself
+
+--local iterationsCount = 0
 
 local amountOfChunks = 0
 local amountOfBlocks = 0
@@ -35,12 +39,8 @@ end
 
 local loadedChunks = 0
 
-task.wait(5) --// Wait a few seconds for nothing, just let the game load itself
-
---local iterationsCount = 0
-
 local function iterateThroughChunk(cx: number, cy: number)
-	local chunk = WorldManager.getChunk(cx, cy)
+	local chunk = WorldManager:GetChunk(cx, cy)
 
 	chunk:Iterate(function(block)
 		amountOfBlocks += 1
@@ -65,5 +65,5 @@ for x, rows in chunks do
 	end
 end
 
-WorldManager.isLinkedToRenderer = true
+WorldManager.ChunksGenerated:Fire(true)
 LoadingS:FireAll()

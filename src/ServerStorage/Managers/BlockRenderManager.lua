@@ -16,6 +16,8 @@ renderFolder.Parent = workspace
 
 --// Constants
 local BLOCK_SIZE = 3
+local TEXTURE_PADDING = (BLOCK_SIZE / 128)
+
 local map = {} :: { { { Part } } }
 
 local faces = {
@@ -60,7 +62,7 @@ local function createBlock(id: number): Part
 	return part
 end
 
-local function createTexture(id: number, face: Enum.NormalId?): Texture?
+local function createTexture(id: number, face: Enum.NormalId): Texture?
 	local texture = inew("Texture")
 	local blockData = BlockDataProvider:GetData(id)
 
@@ -71,8 +73,10 @@ local function createTexture(id: number, face: Enum.NormalId?): Texture?
 	texture.Texture = (type(blockData.Textures) == "string") and blockData.Textures or blockData.Textures[face.Name]
 
 	texture.Face = face
-	texture.StudsPerTileU = BLOCK_SIZE
-	texture.StudsPerTileV = BLOCK_SIZE
+	texture.StudsPerTileU = BLOCK_SIZE -- + TEXTURE_PADDING
+	texture.StudsPerTileV = BLOCK_SIZE -- + TEXTURE_PADDING
+	--texture.OffsetStudsU = -TEXTURE_PADDING / 2
+	--texture.OffsetStudsV = -TEXTURE_PADDING / 2
 	texture.ZIndex = -1
 
 	texture.Name = face.Name
@@ -109,6 +113,7 @@ local function appendBlock(block: WorldManager.Block)
 	local x, y, z = block:GetPosition()
 	local rx, ry, rz = block:GetOrientation()
 	local id = block:GetID()
+
 	if id == 0 then
 		return
 	end
@@ -120,10 +125,14 @@ local function appendBlock(block: WorldManager.Block)
 
 	setBlock(x, y, z, part)
 
+	--[[for _, value in Enum.NormalId:GetEnumItems() do
+		createTexture(id, value).Parent = part
+	end]]
+
 	for _, normalId in Enum.NormalId:GetEnumItems() do
 		local direction = Vector3.FromNormalId(normalId)
 
-		local neighbor = WorldManager.getNeighbor(x, y, z, direction)
+		local neighbor = WorldManager:GetNeighbor(x, y, z, direction)
 
 		if neighbor then
 			local nx, ny, nz = neighbor:GetPosition()
@@ -157,7 +166,7 @@ local function deleteBlock(block: WorldManager.Block)
 	for _, normalId in Enum.NormalId:GetEnumItems() do
 		local direction = Vector3.FromNormalId(normalId)
 
-		local neighbor = WorldManager.getNeighbor(x, y, z, direction)
+		local neighbor = WorldManager:GetNeighbor(x, y, z, direction)
 
 		if neighbor then
 			local nx, ny, nz = neighbor:GetPosition()

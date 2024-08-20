@@ -1,7 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
-local BlockRenderEnum = require(ReplicatedStorage.Enums.BlockRenderEnum)
+local BlockRenderEnum = require(ReplicatedStorage.Enums.BlockTypeEnum)
 local DataProvider = require(ReplicatedStorage.Classes.DataProvider)
 
 type Textures = string | { Top: string, Bottom: string, Right: string, Left: string, Front: string, Back: string }

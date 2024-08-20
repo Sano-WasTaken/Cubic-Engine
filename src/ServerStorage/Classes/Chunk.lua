@@ -142,6 +142,7 @@ function Chunk:InsertBlock(block: Block.IBlock, x: number, y: number, z: number)
 	end
 
 	self:_setBlockInPosition(x, y, z, block)
+
 	self.amount += 1
 
 	return true

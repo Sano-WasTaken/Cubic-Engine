@@ -89,6 +89,7 @@ function Item:render()
 			Position = UDim2.fromScale(0.7, 0.7),
 			Text = (props.Amount ~= 0) and props.Amount or "",
 		}),
+		UICorner = Roact.createElement("UICorner", { CornerRadius = UDim.new(0, 7.5) }),
 	})
 end
 

@@ -3,9 +3,8 @@ local ServerStorage = game:GetService("ServerStorage")
 
 local Raycast = require(ReplicatedStorage.Utils.MouseRaycast)
 local MouseNetwork = require(ReplicatedStorage.Networks.MouseNetwork)
-local WorldManager = require(ServerStorage.Managers.WorldManager)
 local InventoryManager = require(ServerStorage.Managers.InventoryManager)
-local Block = require(ServerStorage.Classes.Block)
+local BlockPosingManager = require(ServerStorage.Managers.BlockPosingManager)
 
 local MouseRay = MouseNetwork.MouseRay:Server()
 
@@ -28,13 +27,9 @@ MouseRay:On(function(player: Player, ray: Ray)
 			local inventory = InventoryManager.getInventory(player)
 
 			if isBlock then
-				local correctPos = position + raycastResult.Normal
-
-				local block = Block.new(blockId):SetPosition(correctPos.X, correctPos.Y, correctPos.Z)
-
+				--local correctPos = position + raycastResult.Normal
+				BlockPosingManager(blockId, position, ray.Direction, raycastResult.Normal)
 				inventory:IncrementItemAtIndex(handledSlot, -1)
-
-				WorldManager.insert(block)
 			else
 				print("not a block")
 			end

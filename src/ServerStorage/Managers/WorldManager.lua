@@ -1,7 +1,6 @@
 local HttpService = game:GetService("HttpService")
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
 
 local Block = require(ServerStorage.Classes.Block)
 local Signal = require(ReplicatedStorage.Classes.Signal)
@@ -10,89 +9,54 @@ local DataProviderManager = require(ServerStorage.Managers.DataProviderManager)
 
 local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 
-local isPlayerIsland = true
-
-local player = Players.PlayerAdded:Wait()
-
-local bufferChunk: { { Chunk.Chunk | buffer } } = isPlayerIsland
-		and (DataProviderManager.getData(tostring(player.UserId), "Chunks") or {})
-	or {}
-
-local chunksToPreGen = 2
-
-local blockAdded = Signal.new()
-local blockRemoved = Signal.new()
-local chunksGenerated = Signal.new()
+local WorldManager = {
+	Container = {
+		Chunks = {},
+		ExtraContents = {},
+	},
+	IslandOwner = nil,
+	BlockAdded = Signal.new() :: Signal.Signal<Block>,
+	BlockRemoved = Signal.new() :: Signal.Signal<Block>,
+	ChunksGenerated = Signal.new() :: Signal.Signal<boolean>,
+}
 
 export type Block = Block.IBlock
 
-local function DecompressAll()
-	for cx, rows in bufferChunk do
-		for cy, chunk in rows do
-			task.wait()
-
-			chunk = Chunk.new(tonumber(cx), tonumber(cy), chunk)
-
-			bufferChunk[cx][cy] = chunk
-		end
-	end
+function WorldManager:GetChunks()
+	return self.Container.Chunks
 end
 
-local function GetCompressedChunks()
-	local compressedChunk: { { buffer } } = {}
+function WorldManager:GetChunk(cx: number, cy: number)
+	local chunks = self:GetChunks()
 
-	for cx, rows in bufferChunk do
-		for cy, chunk in rows do
-			compressedChunk[cx] = compressedChunk[cx] or {}
+	chunks[tostring(cx)] = chunks[tostring(cx)] or {}
 
-			compressedChunk[cx][cy] = chunk:Compress()
-		end
-	end
-
-	print(compressedChunk)
-
-	return compressedChunk
-end
-
-local function getChunk(cx: number, cy: number): Chunk.Chunk
-	bufferChunk[tostring(cx)] = bufferChunk[tostring(cx)] or {}
-
-	local chunk = bufferChunk[tostring(cx)][tostring(cy)]
+	local chunk = chunks[tostring(cx)][tostring(cy)]
 
 	if chunk == nil then
 		chunk = Chunk.new(cx, cy)
-		bufferChunk[tostring(cx)][tostring(cy)] = chunk
+		chunks[tostring(cx)][tostring(cy)] = chunk
 	end
 
 	if typeof(chunk) == "buffer" then
 		chunk = Chunk.new(cx, cy, chunk)
 
-		bufferChunk[tostring(cx)][tostring(cy)] = chunk
+		chunks[tostring(cx)][tostring(cy)] = chunk
 	end
 
 	if typeof(chunk) == "string" then
 		chunk = Chunk.new(cx, cy, HttpService:JSONDecode(chunk))
 
-		bufferChunk[tostring(cx)][tostring(cy)] = chunk
+		chunks[tostring(cx)][tostring(cy)] = chunk
 	end
 
 	return chunk
 end
 
-local function pregenChunks()
-	for x = -chunksToPreGen, chunksToPreGen do
-		for y = -chunksToPreGen, chunksToPreGen do
-			getChunk(x, y) -- TODO: maybe you can create something better
-		end
-	end
-
-	chunksGenerated:Fire()
-end
-
-local function getBlock(x: number, y: number, z: number): Block.IBlock
+function WorldManager:GetBlock(x: number, y: number, z: number)
 	local cx, cy = Chunk.getChunkPositionFromBlock(x, z)
 
-	local chunk = getChunk(cx, cy)
+	local chunk = self:GetChunk(cx, cy)
 
 	x, y, z = Chunk.getBlockPositionInChunk(x, y, z)
 
@@ -101,8 +65,8 @@ local function getBlock(x: number, y: number, z: number): Block.IBlock
 	return block
 end
 
-local function isBlockExist(x: number, y: number, z: number)
-	local block = getBlock(x, y, z)
+function WorldManager:IsBlockExist(x: number, y: number, z: number)
+	local block = self:GetBlock(x, y, z)
 
 	if block == nil or BlockEnum[block:GetID()] == nil then
 		return false
@@ -111,30 +75,30 @@ local function isBlockExist(x: number, y: number, z: number)
 	return (block:GetID() ~= 0 and BlockEnum[block:GetID()] ~= nil)
 end
 
-local function insert(block: Block.IBlock)
+function WorldManager:Insert(block: Block)
 	local x, y, z = block:GetPosition()
 
-	if isBlockExist(x, y, z) then
+	if self:IsBlockExist(x, y, z) then
 		return
 	end
 
 	local cx, cy = Chunk.getChunkPositionFromBlock(x, z)
 
-	local chunk = getChunk(cx, cy)
+	local chunk = self:GetChunk(cx, cy)
 
 	x, y, z = Chunk.getBlockPositionInChunk(x, y, z)
 
 	local success = chunk:InsertBlock(block, x, y, z)
 
 	if success then
-		blockAdded:Fire(block)
+		self.BlockAdded:Fire(block)
 	end
 end
 
-local function delete(x: number, y: number, z: number)
+function WorldManager:Delete(x: number, y: number, z: number)
 	local cx, cy = Chunk.getChunkPositionFromBlock(x, z)
 
-	local chunk = getChunk(cx, cy)
+	local chunk = self:GetChunk(cx, cy)
 
 	x, y, z = Chunk.getBlockPositionInChunk(x, y, z)
 
@@ -146,20 +110,20 @@ local function delete(x: number, y: number, z: number)
 
 	chunk:DeleteBlock(x, y, z)
 
-	blockRemoved:Fire(block)
+	self.BlockRemoved:Fire(block)
 end
 
-local function getNeighbor(x: number, y: number, z: number, direction: Vector3): Block.IBlock
-	return getBlock(x + direction.X, y + direction.Y, z + direction.Z)
+function WorldManager:GetNeighbor(x: number, y: number, z: number, direction: Vector3)
+	return self:GetBlock(x + direction.X, y + direction.Y, z + direction.Z)
 end
 
-local function getNeighbors(x: number, y: number, z: number): ({ [Vector3]: Block.IBlock }, number)
+function WorldManager:GetNeighbors(x: number, y: number, z: number)
 	local neighbors = {}
 
 	for _, normalId in Enum.NormalId:GetEnumItems() do
 		local direction = Vector3.FromNormalId(normalId)
 
-		local neighbor = getNeighbor(x, y, z, direction)
+		local neighbor = self:GetNeighbor(x, y, z, direction)
 
 		neighbors[direction] = neighbor
 	end
@@ -167,53 +131,86 @@ local function getNeighbors(x: number, y: number, z: number): ({ [Vector3]: Bloc
 	return neighbors
 end
 
--- Decompress all the chunks
---DecompressAllChunks()
-DecompressAll()
+function WorldManager:DecompressChunks(compressedChunks: { [string]: { buffer } })
+	local chunks = self.Container.Chunks
 
--- Pregen 5 by 5 region
-pregenChunks()
+	for cx, rows in compressedChunks do
+		for cy, chunk in rows do
+			chunks[cx] = chunks[cx] or {}
+			task.wait()
+
+			chunk = Chunk.new(tonumber(cx), tonumber(cy), chunk)
+
+			chunks[cx][cy] = chunk
+		end
+	end
+end
+
+function WorldManager:GetCompressedChunks()
+	local compressedChunk: { { buffer } } = {}
+
+	for cx, rows in self:GetChunks() do
+		for cy, chunk in rows do
+			compressedChunk[cx] = compressedChunk[cx] or {}
+
+			compressedChunk[cx][cy] = chunk:Compress()
+		end
+	end
+
+	return compressedChunk
+end
+
+function WorldManager:SetOwner(player: Player)
+	self.IslandOwner = player
+end
+
+function WorldManager:GetOwner()
+	return self.IslandOwner
+end
+
+function WorldManager:IsPlayerIsland()
+	return self:GetOwner() ~= nil
+end
+
+function WorldManager:Init(chunks: { [string]: { buffer } })
+	WorldManager:DecompressChunks(chunks)
+end
+
+function WorldManager:WaitForOwner()
+	repeat
+		task.wait()
+	until self:GetOwner() ~= nil
+end
+
+function WorldManager:WaitForOwnerData()
+	self.ChunksGenerated:Wait()
+end
 
 -- Auto Save
 coroutine.wrap(function()
-	if isPlayerIsland then
+	if WorldManager:IsPlayerIsland() then
 		while true do
 			task.wait(5 * 60)
 
 			print("About to save chunks")
 			local start = os.clock()
-			local compressedChunks = GetCompressedChunks()
+			local compressedChunks = WorldManager:GetCompressedChunks()
 
-			DataProviderManager.saveData(tostring(player.UserId), "Chunks", compressedChunks)
+			DataProviderManager.saveData(tostring(WorldManager:GetOwner().UserId), "Chunks", compressedChunks)
 			print("Chunks saved in " .. os.clock() - start .. " secs", compressedChunks)
 		end
 	end
 end)()
---
 
+-- Bind to close
 game:BindToClose(function()
-	if isPlayerIsland then
-		local compressedChunks = GetCompressedChunks()
+	if WorldManager:IsPlayerIsland() then
+		local compressedChunks = WorldManager:GetCompressedChunks()
 
 		print("Data saved:", HttpService:JSONEncode(compressedChunks):len() .. " Octets")
 
-		DataProviderManager.saveData(tostring(player.UserId), "Chunks", compressedChunks)
+		DataProviderManager.saveData(tostring(WorldManager:GetOwner().UserId), "Chunks", compressedChunks)
 	end
 end)
 
-return {
-	getBlock = getBlock,
-	getNeighbor = getNeighbor,
-	insert = insert,
-	BlockAdded = blockAdded,
-	BlockRemoved = blockRemoved,
-	ChunksGenerated = chunksGenerated,
-	getNeighbors = getNeighbors,
-	delete = delete,
-	isLinkedToRenderer = false,
-	getChunk = getChunk,
-	getChunks = function()
-		return bufferChunk
-	end,
-	IsPlayerIsland = isPlayerIsland,
-}
+return WorldManager

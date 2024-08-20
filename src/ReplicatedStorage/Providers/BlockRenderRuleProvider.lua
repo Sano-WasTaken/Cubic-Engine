@@ -1,6 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local BlockRenderEnum = require(ReplicatedStorage.Enums.BlockRenderEnum)
+local BlockRenderEnum = require(ReplicatedStorage.Enums.BlockTypeEnum)
 local DataProvider = require(ReplicatedStorage.Classes.DataProvider)
 
 type TexturesRule = {

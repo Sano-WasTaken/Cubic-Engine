@@ -74,6 +74,7 @@ function Inventory:render()
 			PaddingRight = UDim.new(0, PADDING),
 			PaddingTop = UDim.new(0, PADDING),
 		}),
+		UICorner = Roact.createElement("UICorner", { CornerRadius = UDim.new(0, 10) }),
 		Fragment = fragment,
 	})
 end

@@ -3,23 +3,26 @@ local ServerStorage = game:GetService("ServerStorage")
 --local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 
+local DataProviderManager = require(ServerStorage.Managers.DataProviderManager)
 local WorldManager = require(ServerStorage.Managers.WorldManager)
 local Block = require(ServerStorage.Classes.Block)
 --local BlockDataProvider = require(ReplicatedStorage.Providers.BlockDataProvider)
 
-repeat
-	task.wait()
-until WorldManager.isLinkedToRenderer == true
-
 print("loading success !")
-Players.CharacterAutoLoads = true
+
+local player = Players.PlayerAdded:Wait()
+
+WorldManager:SetOwner(player)
+
+WorldManager:Init(DataProviderManager.getData(tostring(player.UserId), "Chunks"))
 
 --WorldManager.insert(Block.new(2):SetPosition(86, 4, 52))
 --print(WorldManager.getBlock(0, 4, 0):GetID())
 --print(WorldManager.getChunks())
+WorldManager.ChunksGenerated:Wait()
 
-for _, player in Players:GetPlayers() do
-	player:LoadCharacter()
+for _, _player in Players:GetPlayers() do
+	_player:LoadCharacter()
 end
 
 --print(WorldManager.getBlock(0, 0, 0):GetID())
@@ -48,8 +51,8 @@ end
 	end
 end]]
 
-WorldManager.delete(0, 7, 0)
-WorldManager.insert(Block.new(4):SetPosition(0, 7, 0))
+WorldManager:Delete(0, 7, 0)
+WorldManager:Insert(Block.new(4):SetPosition(0, 7, 0))
 
 --[[
 local offset = Vector3.new(10, 0, math.floor(#BlockDataProvider/2))
