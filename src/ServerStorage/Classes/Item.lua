@@ -6,6 +6,7 @@ local ItemDataProvider = require(ReplicatedStorage.Providers.ItemDataProvider)
 
 local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 local ItemEnum = require(ReplicatedStorage.Enums.ItemEnum)
+local ToolEnum = require(ReplicatedStorage.Enums.ToolEnum)
 
 local defaultBuffer = BufferManager.new()
 
@@ -121,7 +122,7 @@ function Item:GetMetadata(): { [string]: any }
 end
 
 -- give a confirmation that the item is a block and gives you the block id
-function Item:IsBlock(): (boolean, number)
+function Item:IsABlock(): (boolean, number?)
 	local itemData = self:GetItemData()
 
 	if itemData and itemData.BlockData then
@@ -131,6 +132,12 @@ function Item:IsBlock(): (boolean, number)
 	else
 		return false
 	end
+end
+
+function Item:IsATool()
+	local toolId = ToolEnum[ItemEnum[self:GetID()]]
+
+	return toolId ~= nil, toolId
 end
 
 function Item:GetItemData()

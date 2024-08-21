@@ -5,6 +5,7 @@ local Raycast = require(ReplicatedStorage.Utils.MouseRaycast)
 local MouseNetwork = require(ReplicatedStorage.Networks.MouseNetwork)
 local InventoryManager = require(ServerStorage.Managers.InventoryManager)
 local BlockPosingManager = require(ServerStorage.Managers.BlockPosingManager)
+local ToolManager = require(ServerStorage.Managers.ToolManager)
 
 local MouseRay = MouseNetwork.MouseRay:Server()
 
@@ -22,7 +23,8 @@ MouseRay:On(function(player: Player, ray: Ray)
 
 		if handledItem then
 			-- TODO: find a way to do it better (A Item Manager or Block Manager | optional)
-			local isBlock, blockId = handledItem:IsBlock()
+			local isBlock, blockId = handledItem:IsABlock()
+			local isTool, toolId = handledItem:IsATool()
 			local handledSlot = InventoryManager.getHandledSlot(player) + 3 * 9
 			local inventory = InventoryManager.getInventory(player)
 
@@ -30,8 +32,10 @@ MouseRay:On(function(player: Player, ray: Ray)
 				--local correctPos = position + raycastResult.Normal
 				BlockPosingManager(blockId, position, ray.Direction, raycastResult.Normal)
 				inventory:IncrementItemAtIndex(handledSlot, -1)
+			elseif isTool then
+				ToolManager(toolId, position, raycastResult.Normal)
 			else
-				print("not a block")
+				print("not a block", "not a tool")
 			end
 		end
 	end
