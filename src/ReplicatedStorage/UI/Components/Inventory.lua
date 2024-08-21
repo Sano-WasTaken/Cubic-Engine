@@ -10,6 +10,7 @@ local Inventory = Roact.Component:extend("Inventory")
 local PADDING = 5
 local PADDING_CELL = 8
 local CELL_SIZE = 60
+local BACKGROUND_COLOR = Color3.fromHex("#333340")
 
 export type InventoryProps = {
 	Rows: number,
@@ -57,7 +58,7 @@ function Inventory:render()
 		),
 		Position = props.Position,
 		AnchorPoint = props.AnchorPoint or Vector2.new(0.5, 0.5),
-		BackgroundColor3 = Color3.new(0.894117, 0.894117, 0.894117),
+		BackgroundColor3 = BACKGROUND_COLOR,
 		BorderSizePixel = 0,
 	}, {
 		UIScale = Roact.createElement("UIScale", {

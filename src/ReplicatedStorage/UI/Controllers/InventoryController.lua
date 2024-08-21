@@ -7,6 +7,7 @@ local Item = require(ReplicatedStorage.Classes.Item)
 local ItemComponent = require(ReplicatedStorage.UI.Components.Item)
 local Inventory = require(ReplicatedStorage.UI.Components.Inventory)
 local InventoryNetwork = require(ReplicatedStorage.Networks.InventoryNetwork)
+local ScaleController = require(ReplicatedStorage.UI.Controllers.ScaleController)
 
 local RequestSwapItem = InventoryNetwork.RequestSwapItem:Client()
 
@@ -157,6 +158,12 @@ function InventoryController:updateElements()
 		}, {
 			Inventory = Roact.createElement(Inventory, inventoryProps),
 			Hotbar = Roact.createElement(Inventory, hotbarProps),
+			UIScale = Roact.createElement(
+				"UIScale",
+				{ Scale = ScaleController:map(function(scale)
+					return 1.25 * scale
+				end) }
+			),
 		}),
 	})
 end

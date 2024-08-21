@@ -7,6 +7,7 @@ local Item = require(ReplicatedStorage.Classes.Item)
 local ItemComponent = require(ReplicatedStorage.UI.Components.Item)
 local Inventory = require(ReplicatedStorage.UI.Components.Inventory)
 local InventoryNetwork = require(ReplicatedStorage.Networks.InventoryNetwork)
+local ScaleController = require(ReplicatedStorage.UI.Controllers.ScaleController)
 
 local RequestEquipItem = InventoryNetwork.RequestEquipItem:Client()
 
@@ -93,7 +94,9 @@ function HotbarController:updateElements()
 	local hotbarProps: Inventory.InventoryProps = {
 		Columns = 9,
 		Rows = 1,
-		Scale = 1.5,
+		Scale = ScaleController:map(function(scale)
+			return 1.5 * scale
+		end),
 		Position = UDim2.fromScale(0.5, 1),
 		Items = self.Inventory,
 		AnchorPoint = Vector2.new(0.5, 1),

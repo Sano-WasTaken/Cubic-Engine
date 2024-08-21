@@ -5,8 +5,8 @@ local GetMesh = require(ReplicatedStorage.UI.Utils.GetMesh)
 
 local Item = Roact.Component:extend("Item")
 
-local HOVERED_COLOR = Color3.fromRGB(160, 160, 160)
-local CELL_COLOR = Color3.fromRGB(207, 207, 207)
+local CELL_COLOR = Color3.fromHex("#4D4D54")
+local HOVERED_COLOR = Color3.fromHex("#393943")
 
 export type ItemProps = {
 	Name: string?,
@@ -88,6 +88,9 @@ function Item:render()
 			Size = UDim2.fromScale(0.3, 0.3),
 			Position = UDim2.fromScale(0.7, 0.7),
 			Text = (props.Amount ~= 0) and props.Amount or "",
+			TextColor3 = Color3.new(1, 1, 1),
+			FontSize = Enum.FontSize.Size10,
+			Font = Enum.Font.GothamBold,
 		}),
 		UICorner = Roact.createElement("UICorner", { CornerRadius = UDim.new(0, 7.5) }),
 	})
