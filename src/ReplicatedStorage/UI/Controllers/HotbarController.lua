@@ -54,6 +54,9 @@ function HotbarController:equip(index: number)
 
 	RequestEquipItem:Fire(index)
 	self.SelectedSlot = index
+	if self.Tree ~= nil then
+		self:updateTree()
+	end
 end
 
 function HotbarController:Unmount()
@@ -97,6 +100,7 @@ function HotbarController:updateElements()
 		Scale = ScaleController:map(function(scale)
 			return 1.5 * scale
 		end),
+		SelectedSlot = self.SelectedSlot,
 		Position = UDim2.fromScale(0.5, 1),
 		Items = self.Inventory,
 		AnchorPoint = Vector2.new(0.5, 1),

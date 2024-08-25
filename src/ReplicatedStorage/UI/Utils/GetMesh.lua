@@ -1,7 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ItemDataProvider = require(ReplicatedStorage.Providers.ItemDataProvider)
-local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
+--local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
+local ItemEnum = require(ReplicatedStorage.Enums.ItemEnum)
 
 local function CreateTextures(textures: any, parent: Instance)
 	for _, normalId in Enum.NormalId:GetEnumItems() do
@@ -16,7 +17,7 @@ local function CreateTextures(textures: any, parent: Instance)
 end
 
 local function GetMesh(name: string): (BasePart, Camera)
-	local data = ItemDataProvider:GetData(BlockEnum[name])
+	local data = ItemDataProvider:GetData(ItemEnum[name])
 
 	if data == nil then
 		return --Instance.new("Part")

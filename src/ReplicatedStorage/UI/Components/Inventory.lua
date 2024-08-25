@@ -8,7 +8,7 @@ local ItemClass = require(ReplicatedStorage.Classes.Item)
 local Inventory = Roact.Component:extend("Inventory")
 
 local PADDING = 5
-local PADDING_CELL = 8
+local PADDING_CELL = 5
 local CELL_SIZE = 60
 local BACKGROUND_COLOR = Color3.fromHex("#333340")
 
@@ -20,14 +20,13 @@ export type InventoryProps = {
 	Items: { ItemClass.Item },
 	Offset: number,
 	AnchorPoint: Vector2?,
+	SelectedSlot: number,
 	Event: {
 		Clicked: (rbx: ViewportFrame, props: Item.ItemProps) -> (),
 		Hovered: (rbx: ViewportFrame, props: Item.ItemProps) -> (),
 		Leaved: (rbx: ViewportFrame) -> (),
 	},
 }
-
-function Inventory:init() end
 
 function Inventory:render()
 	local props: InventoryProps = self.props
@@ -42,6 +41,7 @@ function Inventory:render()
 			Events = props.Event,
 			Name = item.Name,
 			Index = i,
+			Selected = i == props.SelectedSlot,
 		}
 
 		local element = Roact.createElement(Item, itemProps)

@@ -7,6 +7,7 @@ local Item = Roact.Component:extend("Item")
 
 local CELL_COLOR = Color3.fromHex("#4D4D54")
 local HOVERED_COLOR = Color3.fromHex("#393943")
+local SELECTED_COLOR = Color3.fromHex("8f8fa8")
 
 export type ItemProps = {
 	Name: string?,
@@ -17,6 +18,7 @@ export type ItemProps = {
 		Hovered: (rbx: ViewportFrame, props: ItemProps) -> (),
 		Leaved: (rbx: ViewportFrame) -> (),
 	},
+	Selected: boolean?,
 	Position: UDim2?,
 	Transparency: number?,
 }
@@ -87,11 +89,15 @@ function Item:render()
 			BackgroundTransparency = 1,
 			Size = UDim2.fromScale(0.3, 0.3),
 			Position = UDim2.fromScale(0.7, 0.7),
-			Text = (props.Amount ~= 0) and props.Amount or "",
+			Text = (props.Amount > 1) and props.Amount or "",
 			TextColor3 = Color3.new(1, 1, 1),
-			FontSize = Enum.FontSize.Size10,
+			FontSize = Enum.FontSize.Size14,
 			Font = Enum.Font.GothamBold,
 		}),
+		UIStroke = Roact.createElement(
+			"UIStroke",
+			{ Color = SELECTED_COLOR, Enabled = props.Selected == true, Thickness = 2 }
+		),
 		UICorner = Roact.createElement("UICorner", { CornerRadius = UDim.new(0, 7.5) }),
 	})
 end

@@ -16,7 +16,7 @@ renderFolder.Parent = workspace
 
 --// Constants
 local BLOCK_SIZE = 3
-local TEXTURE_PADDING = (BLOCK_SIZE / 128)
+--local TEXTURE_PADDING = (BLOCK_SIZE / 128)
 
 local map = {} :: { { { Part } } }
 
@@ -33,7 +33,7 @@ local faces = {
 local model = Instance.new("Part")
 model.Anchored = true
 model.Size = Vector3.one * BLOCK_SIZE
-model.Material = Enum.Material.SmoothPlastic
+model.Material = Enum.Material.Plastic
 
 --// Functions micro optimisation
 local cfnew = CFrame.new

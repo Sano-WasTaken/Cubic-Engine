@@ -1,4 +1,8 @@
 local DataStoreService = game:GetService("DataStoreService")
+--local MemoryStoreService = game:GetService("MemoryStoreService")
+
+--local Players = game:GetService("Players")
+local DATABASE_NAME = "Player_Database"
 
 local function waitForBudget(requestType: Enum.DataStoreRequestType)
 	repeat
@@ -6,46 +10,135 @@ local function waitForBudget(requestType: Enum.DataStoreRequestType)
 	until DataStoreService:GetRequestBudgetForRequestType(requestType) > 150
 end
 
-local scopes = {
-	PlayerInventory = true,
-	Chunks = true,
+--[[
+List of scopes !
+
+"Island", "PlayerData"
+
+]]
+
+export type Island = { Chunks: {}, ExtraContent: {} }
+export type PlayerData = {
+	Inventory: buffer?,
+	Coins: number,
 }
 
-local function getDataStore(scope: string): DataStore
-	if scopes[scope] then
-		return DataStoreService:GetDataStore("Data_Player_V3", scope)
+local Scopes = {
+	PlayerData = "PlayerData",
+	Island = "Island",
+}
+
+local Manager = {
+	Sessions = {},
+}
+
+function Manager:GetDataStoreFromScope(scope: string): DataStore
+	return DataStoreService:GetDataStore(DATABASE_NAME, scope)
+end
+
+function Manager:ReconcileSession(name: string, template: {})
+	local session = self:GetSession(name)
+
+	for k, v in template do
+		if session[k] == nil then
+			session[k] = v
+		end
+	end
+
+	for k, _ in session do
+		if template[k] == nil then
+			session[k] = nil
+		end
 	end
 end
 
-local function getData<T>(key: string, scope: string): T
-	waitForBudget(Enum.DataStoreRequestType.GetAsync)
-
-	local dataStore = getDataStore(scope)
-
-	local ok, result = pcall(dataStore.GetAsync, dataStore, `Player_{key}`)
-
-	if ok and result ~= nil then
-		return result
-	end
-
-	warn(result)
-
-	return nil
+function Manager:CreateSession(name: string, data: any)
+	self.Sessions[name] = data
 end
 
-local function saveData<T>(key: string, scope: string, data: T)
+function Manager:DeleteSession(name: string)
+	self.Sessions[name] = nil
+end
+
+function Manager:GetSession(name: string): any
+	return self.Sessions[name]
+end
+
+function Manager:SaveData(database: DataStore, key: string, data: any)
 	waitForBudget(Enum.DataStoreRequestType.SetIncrementAsync)
 
-	local dataStore = getDataStore(scope)
-
-	local ok, result = pcall(dataStore.SetAsync, dataStore, `Player_{key}`, data)
+	local ok, result = pcall(database.SetAsync, database, key, data)
 
 	if not ok then
 		warn(result)
+	else
+		warn("Saving succeed!")
 	end
 end
 
-return {
-	getData = getData,
-	saveData = saveData,
-}
+function Manager:GetData(database: DataStore, key: string): any
+	waitForBudget(Enum.DataStoreRequestType.GetAsync)
+
+	local ok, result = pcall(database.GetAsync, database, key)
+
+	if not ok then
+		return nil
+	else
+		return result
+	end
+end
+
+function Manager:GetIslandData(userId: number): Island
+	local database = self:GetDataStoreFromScope(Scopes.Island)
+
+	return self:GetData(database, tostring(userId)) or {
+		Chunks = {},
+		ExtraContent = {},
+	}
+end
+
+function Manager:SaveIslandData(userId: number, island: Island)
+	local database = self:GetDataStoreFromScope(Scopes.Island)
+
+	self:SaveData(database, tostring(userId), island)
+end
+
+function Manager:GetPlayerData(userId: string): PlayerData
+	local database = self:GetDataStoreFromScope(Scopes.PlayerData)
+
+	local session = self:GetSession(tostring(userId))
+
+	local data
+
+	local template = {
+		Inventory = nil,
+		Coins = 0,
+	}
+
+	if session then
+		self:ReconcileSession(tostring(userId), template)
+
+		return session
+	else
+		data = self:GetData(database, tostring(userId)) or template
+
+		self:CreateSession(tostring(userId), data)
+	end
+
+	return data
+end
+
+function Manager:SavePlayerData(userId: string)
+	local database = self:GetDataStoreFromScope(Scopes.PlayerData)
+
+	local session = self:GetSession(tostring(userId))
+
+	if session == nil then
+		error("no data in this session")
+	end
+
+	self:SaveData(database, tostring(userId), session)
+	self:DeleteSession(tostring(userId))
+end
+
+return Manager

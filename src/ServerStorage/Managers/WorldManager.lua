@@ -12,7 +12,7 @@ local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 local WorldManager = {
 	Container = {
 		Chunks = {},
-		ExtraContents = {},
+		ExtraContent = {},
 	},
 	IslandOwner = nil,
 	BlockAdded = Signal.new() :: Signal.Signal<Block>,
@@ -24,6 +24,48 @@ export type Block = Block.IBlock
 
 function WorldManager:GetChunks()
 	return self.Container.Chunks
+end
+
+function WorldManager:BlockAddedByIdSignal(id: number): Signal.Signal<Block>
+	local signal = Signal.new()
+
+	self.BlockAdded:Connect(function(block)
+		if block:GetID() == id then
+			signal:Fire(block)
+		end
+	end)
+
+	return signal
+end
+
+function WorldManager:DeleteContentFromBlock(block: Block)
+	local x, y, z = block:GetPosition()
+
+	local index = ("x=%iy=%iz=%i"):format(x, y, z)
+
+	self.Container.ExtraContent[index] = nil
+end
+
+function WorldManager:SwapId(block: Block, id: number)
+	block:_setId(id)
+	self.BlockRemoved:Fire(block)
+	self.BlockAdded:Fire(block)
+end
+
+function WorldManager:RegisterBlockContent(block: Block, content: buffer)
+	local x, y, z = block:GetPosition()
+
+	local index = ("x=%iy=%iz=%i"):format(x, y, z)
+
+	self.Container.ExtraContent[index] = content
+end
+
+function WorldManager:GetBlockContent(block: Block): buffer?
+	local x, y, z = block:GetPosition()
+
+	local index = ("x=%iy=%iz=%i"):format(x, y, z)
+
+	return self.Container.ExtraContent[index]
 end
 
 function WorldManager:GetChunk(cx: number, cy: number)
@@ -108,6 +150,7 @@ function WorldManager:Delete(x: number, y: number, z: number)
 		return
 	end
 
+	self:DeleteContentFromBlock(block)
 	chunk:DeleteBlock(x, y, z)
 
 	self.BlockRemoved:Fire(block)
@@ -172,8 +215,8 @@ function WorldManager:IsPlayerIsland()
 	return self:GetOwner() ~= nil
 end
 
-function WorldManager:Init(chunks: { [string]: { buffer } })
-	WorldManager:DecompressChunks(chunks)
+function WorldManager:Init(island: DataProviderManager.Island)
+	WorldManager:DecompressChunks(island.Chunks)
 end
 
 function WorldManager:WaitForOwner()
@@ -186,31 +229,36 @@ function WorldManager:WaitForOwnerData()
 	self.ChunksGenerated:Wait()
 end
 
+function WorldManager:GetIslandData(): DataProviderManager.Island
+	return {
+		Chunks = self:GetCompressedChunks(),
+		ExtraContent = self.Container.ExtraContent, -- TODO: create management for this
+	}
+end
+
 -- Auto Save
+function WorldManager:Save()
+	if self:IsPlayerIsland() then
+		local data = self:GetIslandData()
+
+		warn("total bytes saved:", HttpService:JSONEncode(data):len() .. " bytes")
+		DataProviderManager:SaveIslandData(self:GetOwner().UserId, data)
+	end
+end
+
 coroutine.wrap(function()
 	if WorldManager:IsPlayerIsland() then
 		while true do
 			task.wait(5 * 60)
 
-			print("About to save chunks")
-			local start = os.clock()
-			local compressedChunks = WorldManager:GetCompressedChunks()
-
-			DataProviderManager.saveData(tostring(WorldManager:GetOwner().UserId), "Chunks", compressedChunks)
-			print("Chunks saved in " .. os.clock() - start .. " secs", compressedChunks)
+			WorldManager:Save()
 		end
 	end
 end)()
 
 -- Bind to close
 game:BindToClose(function()
-	if WorldManager:IsPlayerIsland() then
-		local compressedChunks = WorldManager:GetCompressedChunks()
-
-		print("Data saved:", HttpService:JSONEncode(compressedChunks):len() .. " Octets")
-
-		DataProviderManager.saveData(tostring(WorldManager:GetOwner().UserId), "Chunks", compressedChunks)
-	end
+	WorldManager:Save()
 end)
 
 return WorldManager

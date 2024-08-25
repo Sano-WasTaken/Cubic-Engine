@@ -35,6 +35,10 @@ end
 export type Item = typeof(new())
 
 function Item:SetAmount(amount: number)
+	local stackSize = self:GetItemData().MaxStackSize
+
+	amount = stackSize >= amount and amount or stackSize
+
 	self.buffer:WriteData("AMOUNT", amount)
 
 	return self
@@ -149,4 +153,5 @@ end
 return {
 	new = new,
 	bufferSize = defaultBuffer:GetSize(),
+	Class = Item,
 }

@@ -1,6 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local BufferManager = require(ReplicatedStorage.Classes.BufferManager)
+local ItemEnum = require(ReplicatedStorage.Enums.ItemEnum)
+local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 
 local defaultBuffer = BufferManager.new()
 
@@ -22,6 +24,7 @@ export type IBlock = {
 	SetOrientation: (self: IBlock, rx: number, ry: number, rz: number) -> IBlock,
 	GetBuffer: (self: IBlock) -> (BufferManager.buffering, buffer),
 	GetID: (self: IBlock) -> number,
+	GetLoot: (self: IBlock) -> number?,
 }
 
 local function new(id: number?, buf: buffer?): IBlock
@@ -36,6 +39,10 @@ local function new(id: number?, buf: buffer?): IBlock
 	end
 
 	return self :: IBlock
+end
+
+function Block:_setId(id: number)
+	self.buffer:WriteData("ID", id)
 end
 
 function Block:SetPosition(x: number, y: number, z: number)
@@ -70,6 +77,12 @@ function Block:GetID(): number
 	local buffer: BufferManager.buffering = self.buffer
 
 	return buffer:ReadData("ID")
+end
+
+function Block:GetLoot(): number?
+	local itemId = ItemEnum[BlockEnum[self:GetID()]]
+
+	return itemId
 end
 
 function Block:GetBuffer(): (BufferManager.buffering, buffer)

@@ -61,13 +61,18 @@ function createItem(props: ItemProps): Roact.Element
 	})
 end
 
-local function createGiver(clickEvent: (rbx: ViewportFrame, index: number) -> (), scale: number) -- +1 bruh
+type Events = {
+	Give: (rbx: ViewportFrame, index: number) -> (),
+	Clear: (rbx: ViewportFrame) -> (),
+}
+
+local function createGiver(events: Events, scale: number) -- +1 bruh
 	local CellSize = (500 - (COLUMNS - 1 + 2) * PADDING) / COLUMNS
 
 	local items = {}
 
 	for index, itemName in ItemEnum do
-		local item = createItem({ ID = index, NAME = itemName, CLICK_EVENT = clickEvent })
+		local item = createItem({ ID = index, NAME = itemName, CLICK_EVENT = events.Give })
 
 		items[itemName] = item
 	end
@@ -106,6 +111,13 @@ local function createGiver(clickEvent: (rbx: ViewportFrame, index: number) -> ()
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
 			Fragment = Roact.createFragment(items),
+		}),
+		ClearButton = Roact.createElement("TextButton", {
+			Text = "Clear",
+			[Roact.Event.MouseButton1Click] = events.Clear,
+			AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.new(0.5, 0, 1, -10),
+			Size = UDim2.fromOffset(200, 50),
 		}),
 		UIScale = Roact.createElement("UIScale", { Scale = scale }),
 	})

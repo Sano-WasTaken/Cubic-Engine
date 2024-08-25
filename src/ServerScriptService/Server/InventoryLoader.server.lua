@@ -15,9 +15,13 @@ local RequestGiveItem = InventoryNetwork.RequestGiveItem:Server()
 local RequestClearInventory = InventoryNetwork.RequestClearInventory:Server()
 
 Players.PlayerAdded:Connect(function(player: Player)
-	local buf = DataProviderManager.getData(player.UserId, "PlayerInventory")
+	local playerData = DataProviderManager:GetPlayerData(player.UserId)
+
+	local buf = playerData.Inventory
 
 	local inventory = Inventory.new(4, 9, buf)
+
+	playerData.Inventory = inventory.buffer
 
 	InventoryManager.setInventory(player, inventory)
 
@@ -31,9 +35,7 @@ Players.PlayerAdded:Connect(function(player: Player)
 end)
 
 Players.PlayerRemoving:Connect(function(player: Player)
-	local buf = InventoryManager.getInventory(player).buffer
-
-	DataProviderManager.saveData(player.UserId, "PlayerInventory", buf)
+	DataProviderManager:SavePlayerData(player.UserId)
 
 	InventoryManager.deleteInventory(player)
 end)
@@ -59,7 +61,7 @@ RequestGiveItem:On(function(player: Player, id: number, amount: number)
 
 	local item = Item.new(id):SetAmount(amount or 1)
 
-	print(inventory:AddItem(item))
+	inventory:AddItem(item)
 end)
 
 RequestClearInventory:On(function(player: Player)

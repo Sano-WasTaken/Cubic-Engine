@@ -1,9 +1,10 @@
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
+--local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 local Signal = require(ReplicatedStorage.Classes.Signal)
 local Item = require(ServerStorage.Classes.Item)
+local ItemEnum = require(ReplicatedStorage.Enums.ItemEnum)
 
 local Inventory = {}
 
@@ -55,7 +56,7 @@ function Inventory:GetEmptyIndex()
 end
 
 function Inventory:AddItem(item: Item.Item): number
-	print(item:GetID())
+	--print(item:GetID())
 
 	local index = 0
 
@@ -73,7 +74,7 @@ function Inventory:AddItem(item: Item.Item): number
 			local amount = math.clamp(totalAmount, 1, 64)
 			local sAmount = math.clamp(totalAmount - item:GetItemData().MaxStackSize, 0, 64)
 
-			print(amount, sAmount)
+			--print(amount, sAmount)
 
 			sItem:SetAmount(amount)
 
@@ -87,14 +88,18 @@ function Inventory:AddItem(item: Item.Item): number
 					self:SetItemAtIndex(index, item)
 				end
 			end
+			index = -1
 			break
 		end
+	end
 
-		if sItem == nil then
-			index = i
-			self:SetItemAtIndex(index, item)
-			break
-		end
+	local emptyIndex = self:GetEmptyIndex()
+
+	if index == 0 and emptyIndex ~= 0 then
+		print(index, emptyIndex)
+		index = emptyIndex
+
+		self:SetItemAtIndex(index, item)
 	end
 
 	print(index)
@@ -182,7 +187,7 @@ function Inventory:GetFormattedItems()
 	for i, item in self:GetAllItems() do
 		local itemFormat = {
 			Amount = item:GetAmount(),
-			Name = BlockEnum[item:GetID()],
+			Name = ItemEnum[item:GetID()],
 		}
 
 		items[tostring(i)] = itemFormat
@@ -211,6 +216,30 @@ function Inventory:Clear()
 	end
 
 	self:Update()
+end
+
+function Inventory:IsFull()
+	local count = 0
+	for _, _ in self:GetAllItems() do
+		count += 1
+	end
+
+	return count == self.maxAmount
+end
+
+function Inventory:IsFullFilter(itemId: number): boolean
+	for _, item in self:GetAllItems() do
+		local id = item:GetID()
+		local amount = item:GetAmount()
+
+		--print(id, amount, item:GetItemData().MaxStackSize, amount < item:GetItemData().MaxStackSize, itemId) -- for debugging
+
+		if id == itemId and amount < item:GetItemData().MaxStackSize then
+			return false
+		end
+	end
+
+	return true
 end
 
 return {

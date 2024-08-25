@@ -14,13 +14,16 @@ local player = Players.PlayerAdded:Wait()
 
 WorldManager:SetOwner(player)
 
-WorldManager:Init(DataProviderManager.getData(tostring(player.UserId), "Chunks"))
+local islandData = DataProviderManager:GetIslandData(player.UserId)
+
+WorldManager:Init(islandData)
 
 --WorldManager.insert(Block.new(2):SetPosition(86, 4, 52))
 --print(WorldManager.getBlock(0, 4, 0):GetID())
 --print(WorldManager.getChunks())
 WorldManager.ChunksGenerated:Wait()
 
+Players.CharacterAutoLoads = true
 for _, _player in Players:GetPlayers() do
 	_player:LoadCharacter()
 end

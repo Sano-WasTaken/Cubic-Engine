@@ -6,6 +6,7 @@ local MouseNetwork = require(ReplicatedStorage.Networks.MouseNetwork)
 local InventoryManager = require(ServerStorage.Managers.InventoryManager)
 local BlockPosingManager = require(ServerStorage.Managers.BlockPosingManager)
 local ToolManager = require(ServerStorage.Managers.ToolManager)
+local WorldManager = require(ServerStorage.Managers.WorldManager)
 
 local MouseRay = MouseNetwork.MouseRay:Server()
 
@@ -19,7 +20,8 @@ MouseRay:On(function(player: Player, ray: Ray)
 	if raycastResult and raycastResult.Instance and verifyDistance(raycastResult, player) then
 		local handledItem = InventoryManager.getHandledItem(player)
 
-		local position = (raycastResult.Instance.Position / 3)
+		local position: Vector3 = (raycastResult.Instance.Position / 3)
+		local block = WorldManager:GetBlock(position.X, position.Y, position.Z)
 
 		if handledItem then
 			-- TODO: find a way to do it better (A Item Manager or Block Manager | optional)
@@ -33,7 +35,14 @@ MouseRay:On(function(player: Player, ray: Ray)
 				BlockPosingManager(blockId, position, ray.Direction, raycastResult.Normal)
 				inventory:IncrementItemAtIndex(handledSlot, -1)
 			elseif isTool then
-				ToolManager(toolId, position, raycastResult.Normal)
+				if inventory:IsFullFilter(block:GetLoot()) and inventory:IsFull() then
+					return
+				end
+
+				local items = ToolManager(toolId, position, raycastResult.Normal)
+				for _, item in items do
+					inventory:AddItem(item)
+				end
 			else
 				print("not a block", "not a tool")
 			end

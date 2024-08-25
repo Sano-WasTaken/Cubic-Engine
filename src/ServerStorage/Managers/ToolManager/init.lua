@@ -6,6 +6,7 @@ local Modules = script:GetChildren() :: { ModuleScript }
 
 local ToolDataProvider = require(ReplicatedStorage.Providers.ToolDataProvider)
 local WorldManager = require(ServerStorage.Managers.WorldManager)
+local Item = require(ServerStorage.Classes.Item)
 
 local templateContent = {
 	id = { 0 },
@@ -35,7 +36,17 @@ return function(id: number, position: Vector3, normal: Vector3)
 
 	local positions: { Vector3 } = typeof(position) == "Vector3" and { position } or position
 
+	local targets: { Item.Item } = {}
+
 	for _, p in positions do
+		local lootId = WorldManager:GetBlock(p.X, p.Y, p.Z):GetLoot()
+
+		if lootId then
+			local item = Item.new(lootId):SetAmount(1)
+			table.insert(targets, item)
+		end
 		WorldManager:Delete(p.X, p.Y, p.Z)
 	end
+
+	return targets
 end
