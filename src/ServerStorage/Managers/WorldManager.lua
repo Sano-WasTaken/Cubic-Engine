@@ -14,10 +14,11 @@ local WorldManager = {
 		Chunks = {},
 		ExtraContent = {},
 	},
-	IslandOwner = nil,
+	IslandOwner = nil :: Player?,
 	BlockAdded = Signal.new() :: Signal.Signal<Block>,
 	BlockRemoved = Signal.new() :: Signal.Signal<Block>,
 	ChunksGenerated = Signal.new() :: Signal.Signal<boolean>,
+	Decompressed = Signal.new() :: Signal.Signal<boolean>,
 }
 
 export type Block = Block.IBlock
@@ -156,7 +157,9 @@ function WorldManager:Delete(x: number, y: number, z: number)
 	self.BlockRemoved:Fire(block)
 end
 
-function WorldManager:GetNeighbor(x: number, y: number, z: number, direction: Vector3)
+function WorldManager:GetNeighbor(x: number, y: number, z: number, direction: Vector3 | Enum.NormalId)
+	direction = typeof(direction) == "Vector3" and direction or Vector3.FromNormalId(direction)
+
 	return self:GetBlock(x + direction.X, y + direction.Y, z + direction.Z)
 end
 
@@ -216,17 +219,32 @@ function WorldManager:IsPlayerIsland()
 end
 
 function WorldManager:Init(island: DataProviderManager.Island)
-	WorldManager:DecompressChunks(island.Chunks)
+	self:DecompressChunks(island.Chunks)
+
+	self.Decompressed:Fire(true)
 end
 
 function WorldManager:WaitForOwner()
+	local owner = self:GetOwner()
+
 	repeat
+		if owner then
+			break
+		end
+		owner = self:GetOwner()
+
 		task.wait()
-	until self:GetOwner() ~= nil
+	until owner ~= nil
+
+	return owner
 end
 
 function WorldManager:WaitForOwnerData()
-	self.ChunksGenerated:Wait()
+	return self.ChunksGenerated:Wait()
+end
+
+function WorldManager:WaitForDecompression()
+	return self.Decompressed:Wait()
 end
 
 function WorldManager:GetIslandData(): DataProviderManager.Island

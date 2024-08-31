@@ -7,5 +7,13 @@ return Enumerator.new({
 	"Grass",
 	"Dirt",
 	"SpawnBlock",
+	"SandStone",
 	"Test_Pickaxe",
+	"Test_Pickaxe2",
+	"Coal_Ore",
+	"Iron_Ore",
+	"Copper_Ore",
+	"Gold_Ore",
+	"Iron_Block",
+	"Coal_Block",
 })

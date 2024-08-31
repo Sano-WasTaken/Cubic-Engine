@@ -2,12 +2,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BlockContent = require(ReplicatedStorage.Classes.BlockContent)
 local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 
-local Stone = {
-	Id = BlockEnum.Stone,
-	Textures = "rbxassetid://18640418536",
+local CoalOre = {
+	Id = BlockEnum["Coal_Ore"],
+	Textures = "rbxassetid://81133281928704",
 	--Unbreakable = true,
 }
 
-Stone = BlockContent.Class:extends(Stone)
+CoalOre = BlockContent.Class:extends(CoalOre)
 
-return Stone
+return CoalOre

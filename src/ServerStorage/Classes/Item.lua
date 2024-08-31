@@ -4,10 +4,6 @@ local HttpService = game:GetService("HttpService")
 local BufferManager = require(ReplicatedStorage.Classes.BufferManager)
 local ItemDataProvider = require(ReplicatedStorage.Providers.ItemDataProvider)
 
-local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
-local ItemEnum = require(ReplicatedStorage.Enums.ItemEnum)
-local ToolEnum = require(ReplicatedStorage.Enums.ToolEnum)
-
 local defaultBuffer = BufferManager.new()
 
 defaultBuffer:SetDataInBuffer("ID", 2, "u"):SetDataInBuffer("AMOUNT", 1, "u"):SetDataInBuffer("METADATA", 250, "str")
@@ -123,25 +119,6 @@ function Item:GetMetadata(): { [string]: any }
 	end
 
 	return result
-end
-
--- give a confirmation that the item is a block and gives you the block id
-function Item:IsABlock(): (boolean, number?)
-	local itemData = self:GetItemData()
-
-	if itemData and itemData.BlockData then
-		local blockId = BlockEnum[ItemEnum[self:GetID()]]
-
-		return true, blockId
-	else
-		return false
-	end
-end
-
-function Item:IsATool()
-	local toolId = ToolEnum[ItemEnum[self:GetID()]]
-
-	return toolId ~= nil, toolId
 end
 
 function Item:GetItemData()

@@ -3,8 +3,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Roact = require(ReplicatedStorage.Packages.Roact)
 local Item = require(ReplicatedStorage.UI.Components.Item)
 
-local ItemClass = require(ReplicatedStorage.Classes.Item)
-
 local Inventory = Roact.Component:extend("Inventory")
 
 local PADDING = 5
@@ -17,7 +15,7 @@ export type InventoryProps = {
 	Columns: number,
 	Scale: number,
 	Position: UDim2,
-	Items: { ItemClass.Item },
+	Items: { any },
 	Offset: number,
 	AnchorPoint: Vector2?,
 	SelectedSlot: number,

@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BlockTypeEnum = require(ReplicatedStorage.Enums.BlockTypeEnum)
+local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
 
 -- To prevents server features are using in client context
@@ -10,7 +11,7 @@ local function GetServices()
 	return Block, WorldManager
 end
 
-local isServer, Block, WorldManager = pcall(GetServices)
+local _, Block, WorldManager = pcall(GetServices)
 
 -- Common Block Contents
 export type Textures = string | { Top: string, Bottom: string, Right: string, Left: string, Front: string, Back: string }
@@ -21,6 +22,9 @@ export type CanvasBlock = {
 	Mesh: BasePart?,
 	Unbreakable: boolean?,
 	BlockType: number?,
+	Color: Color3?,
+	Size: Vector3?,
+	ClassName: string?,
 }
 
 local BlockContent = {
@@ -29,16 +33,22 @@ local BlockContent = {
 	Mesh = Instance.new("Part"),
 	Unbreakable = false,
 	BlockType = BlockTypeEnum.Block,
+	ClassName = "Block",
+	Size = Vector3.one * 3,
 }
 
 export type BlockContent = typeof(BlockContent)
 
 function assertContext()
-	assert(isServer, "you should do this server sided")
+	assert(RunService:IsServer(), "you should do this server sided")
 end
 
 function BlockContent:GetTexture(): Textures
 	return self.Textures
+end
+
+function BlockContent:IsA(className: string)
+	return self.ClassName == className
 end
 
 function BlockContent:GetID()
@@ -46,7 +56,11 @@ function BlockContent:GetID()
 end
 
 function BlockContent:GetMeshClone(): BasePart
-	return self.Mesh:Clone()
+	local mesh: BasePart = self.Mesh:Clone()
+
+	mesh.Size = self.Size
+
+	return mesh
 end
 
 function BlockContent:IsUnbreakable()
@@ -65,12 +79,16 @@ end
 function BlockContent:CreateBlock(x: number, y: number, z: number, rx: number, ry: number, rz: number)
 	assertContext()
 
-	return Block.new(self.Id):SetPosition(x, y, z)
+	_, Block, _ = self:GetServices()
+
+	return Block.new(self.Id):SetPosition(x, y, z):SetOrientation(rx, ry, rz)
 end
 
 -- Server Only
 function BlockContent:AppendBlock(x: number, y: number, z: number, rx: number, ry: number, rz: number)
 	local block = self:CreateBlock(x, y, z, rx, ry, rz)
+
+	_, _, WorldManager = self:GetServices()
 
 	WorldManager:Insert(block)
 end

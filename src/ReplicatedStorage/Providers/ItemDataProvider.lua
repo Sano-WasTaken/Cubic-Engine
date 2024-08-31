@@ -1,40 +1,41 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local meshes = ReplicatedStorage.Meshes
-
 local ItemEnum = require(ReplicatedStorage.Enums.ItemEnum)
-local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 local DataProvider = require(ReplicatedStorage.Classes.DataProvider)
-local BlockDataProvider = require(ReplicatedStorage.Providers.BlockDataProvider)
+local ItemContent = require(ReplicatedStorage.Classes.ItemContent)
+local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
+local BlockItemContent = require(ReplicatedStorage.Classes.BlockItemContent)
 
-type Textures = string | { Top: string, Bottom: string, Right: string, Left: string, Front: string, Back: string }
-export type ItemData = {
-	BlockData: BlockDataProvider.BlockData?,
-	Mesh: BasePart,
-	MaxStackSize: number?,
-}
+local items = ReplicatedStorage.Contents.Items
 
-type ItemDataProvider = DataProvider.DataProvider<ItemData>
+type ItemDataProvider = DataProvider.DataProvider<ItemContent.ItemContent>
 
 local ItemDataProvider: ItemDataProvider = DataProvider.new(ItemEnum)
 
-local part = Instance.new("Part")
+local function AppendContents(module: ModuleScript)
+	local ok, result: ItemContent.ItemContent = pcall(require, module)
 
-for id, name in BlockEnum do
-	local itemID = ItemEnum[name]
-
-	if itemID then
-		ItemDataProvider:InsertData(itemID, {
-			BlockData = BlockDataProvider:GetData(id),
-			MaxStackSize = 64,
-			Mesh = part,
-		})
+	if not ok then
+		warn(result)
+	else
+		ItemDataProvider:InsertData(result:GetID(), result)
 	end
 end
 
-ItemDataProvider:InsertData(ItemEnum["Test_Pickaxe"], {
-	Mesh = meshes["Pickaxe/1"],
-	MaxStackSize = 1,
-})
+for _, name in BlockEnum do
+	local itemID = ItemEnum[name]
+
+	if itemID then
+		local blockItem = BlockItemContent:extends({ Id = itemID })
+
+		ItemDataProvider:InsertData(blockItem:GetID(), blockItem)
+	end
+end
+
+for _, module in items:GetDescendants() do
+	if module:IsA("ModuleScript") then
+		AppendContents(module)
+	end
+end
 
 return ItemDataProvider

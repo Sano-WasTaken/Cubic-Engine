@@ -8,8 +8,6 @@ local WorldManager = require(ServerStorage.Managers.WorldManager)
 local Block = require(ServerStorage.Classes.Block)
 --local BlockDataProvider = require(ReplicatedStorage.Providers.BlockDataProvider)
 
-print("loading success !")
-
 local player = Players.PlayerAdded:Wait()
 
 WorldManager:SetOwner(player)
@@ -17,11 +15,14 @@ WorldManager:SetOwner(player)
 local islandData = DataProviderManager:GetIslandData(player.UserId)
 
 WorldManager:Init(islandData)
+print("initialized")
 
 --WorldManager.insert(Block.new(2):SetPosition(86, 4, 52))
 --print(WorldManager.getBlock(0, 4, 0):GetID())
 --print(WorldManager.getChunks())
 WorldManager.ChunksGenerated:Wait()
+
+print("loading success !")
 
 Players.CharacterAutoLoads = true
 for _, _player in Players:GetPlayers() do

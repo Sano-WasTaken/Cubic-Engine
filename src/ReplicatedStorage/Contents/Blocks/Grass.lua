@@ -2,7 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BlockContent = require(ReplicatedStorage.Classes.BlockContent)
 local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 
-local _, Block, WorldManager = BlockContent.Class:GetServices()
+local _, _, WorldManager = BlockContent.Class:GetServices()
 
 local Grass = {
 	Id = BlockEnum.Grass,
@@ -23,7 +23,7 @@ function Grass:UpdateContent(block: BlockContent.Block, _)
 
 	local x, y, z = block:GetPosition()
 
-	local upNeighbor = WorldManager:GetNeighbor(x, y, z, Vector3.new(0, 1, 0))
+	local upNeighbor = WorldManager:GetNeighbor(x, y, z, Enum.NormalId.Top)
 
 	if upNeighbor then
 		WorldManager:SwapId(block, BlockEnum.Dirt)

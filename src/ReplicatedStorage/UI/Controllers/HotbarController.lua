@@ -3,7 +3,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
 local Roact = require(ReplicatedStorage.Packages.Roact)
-local Item = require(ReplicatedStorage.Classes.Item)
 local ItemComponent = require(ReplicatedStorage.UI.Components.Item)
 local Inventory = require(ReplicatedStorage.UI.Components.Inventory)
 local InventoryNetwork = require(ReplicatedStorage.Networks.InventoryNetwork)
@@ -33,7 +32,7 @@ local keys = {
 	Enum.KeyCode.Nine,
 }
 
-function HotbarController:Init(inventory: { Item.Item })
+function HotbarController:Init(inventory: { any })
 	self:Update(inventory)
 
 	self.UserInputService = UserInputService.InputBegan:Connect(function(input, _)
@@ -115,7 +114,7 @@ function HotbarController:updateElements()
 	)
 end
 
-function HotbarController:Update(inventory: { Item.Item })
+function HotbarController:Update(inventory: { any })
 	for i = 1, 9 do
 		local item = inventory[tostring(i + 3 * 9)]
 

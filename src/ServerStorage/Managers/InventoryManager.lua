@@ -1,6 +1,8 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
 local Inventory = require(ServerStorage.Classes.Inventory)
+local ItemDataProvider = require(ReplicatedStorage.Providers.ItemDataProvider)
 
 type Interface = { Inventory: Inventory.Inventory, HandledSlot: number }
 
@@ -50,7 +52,7 @@ local function getHandledItem(player: Player)
 		return
 	end
 
-	return item
+	return ItemDataProvider:GetData(item:GetID())
 end
 
 local function deleteInventory(player: Player)

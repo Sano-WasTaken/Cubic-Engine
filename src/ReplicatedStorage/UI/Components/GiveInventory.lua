@@ -56,7 +56,7 @@ function createItem(props: ItemProps): Roact.Element
 			Position = UDim2.fromScale(0.5, 1),
 			Size = UDim2.fromScale(0.8, 0.2),
 			BackgroundTransparency = 1,
-			Text = props.NAME,
+			Text = props.NAME:gsub("%_", " "),
 		}),
 	})
 end

@@ -1,17 +1,16 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Red = require(ReplicatedStorage.Packages.Red)
-local Item = require(ReplicatedStorage.Classes.Item)
 local EnumItem = require(ReplicatedStorage.Enums.ItemEnum)
 
 return {
 	GetInventory = Red.Function("GetInventory", function(id: string?)
 		return id
-	end, function(inventory: { Item.Item })
+	end, function(inventory: { any })
 		return inventory
 	end),
 
-	UpdateInventory = Red.Event("UpdateInventory", function(inventory: { Item.Item })
+	UpdateInventory = Red.Event("UpdateInventory", function(inventory: { any })
 		return inventory
 	end),
 

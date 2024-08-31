@@ -3,7 +3,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Roact = require(ReplicatedStorage.Packages.Roact)
-local Item = require(ReplicatedStorage.Classes.Item)
 local ItemComponent = require(ReplicatedStorage.UI.Components.Item)
 local Inventory = require(ReplicatedStorage.UI.Components.Inventory)
 local InventoryNetwork = require(ReplicatedStorage.Networks.InventoryNetwork)
@@ -23,7 +22,7 @@ local InventoryController = {
 	Dragger = nil :: Roact.Tree,
 }
 
-function InventoryController:CreateDragger(item: Item.Item)
+function InventoryController:CreateDragger(item: any)
 	local positionValue, positionUpdate = Roact.createBinding(UDim2.fromOffset(mouse.X, mouse.Y))
 
 	local props: ItemComponent.ItemProps = {
@@ -42,7 +41,7 @@ function InventoryController:CreateDragger(item: Item.Item)
 	return Roact.createElement(ItemComponent, props), positionUpdate
 end
 
-function InventoryController:Init(inventory: { Item.Item })
+function InventoryController:Init(inventory: { any })
 	self:Update(inventory)
 
 	self:mountTree()
@@ -192,7 +191,7 @@ function InventoryController:mountTree()
 	self.Tree = Roact.mount(self.Element, player:WaitForChild("PlayerGui"), "Inventory")
 end
 
-function InventoryController:Update(inventory: { Item.Item })
+function InventoryController:Update(inventory: { any })
 	for i = 1, 4 * 9 do
 		local index = inventory[tostring(i)]
 

@@ -4,9 +4,9 @@ local ServerStorage = game:GetService("ServerStorage")
 local Raycast = require(ReplicatedStorage.Utils.MouseRaycast)
 local MouseNetwork = require(ReplicatedStorage.Networks.MouseNetwork)
 local InventoryManager = require(ServerStorage.Managers.InventoryManager)
-local BlockPosingManager = require(ServerStorage.Managers.BlockPosingManager)
-local ToolManager = require(ServerStorage.Managers.ToolManager)
 local WorldManager = require(ServerStorage.Managers.WorldManager)
+local Item = require(ServerStorage.Classes.Item)
+local Block = require(ServerStorage.Classes.Block)
 
 local MouseRay = MouseNetwork.MouseRay:Server()
 
@@ -14,32 +14,53 @@ local function verifyDistance(raycastResult: RaycastResult, player: Player): boo
 	return (raycastResult.Position - player.Character:FindFirstChild("HumanoidRootPart").Position).Magnitude < 30
 end
 
+--TODO: demain tu refactoring tout ça pd
 MouseRay:On(function(player: Player, ray: Ray)
 	local raycastResult = Raycast.Raycast(ray, 500, player.Character:GetChildren())
 
 	if raycastResult and raycastResult.Instance and verifyDistance(raycastResult, player) then
 		local handledItem = InventoryManager.getHandledItem(player)
-
 		local position: Vector3 = (raycastResult.Instance.Position / 3)
 		local block = WorldManager:GetBlock(position.X, position.Y, position.Z)
 
 		if handledItem then
 			-- TODO: find a way to do it better (A Item Manager or Block Manager | optional)
-			local isBlock, blockId = handledItem:IsABlock()
-			local isTool, toolId = handledItem:IsATool()
 			local handledSlot = InventoryManager.getHandledSlot(player) + 3 * 9
 			local inventory = InventoryManager.getInventory(player)
 
-			if isBlock then
+			if not handledItem:IsUsable() then
+				return
+			end
+
+			if handledItem:IsA("BlockItem") then
 				--local correctPos = position + raycastResult.Normal
-				BlockPosingManager(blockId, position, ray.Direction, raycastResult.Normal)
+
+				local correctPos: Vector3 = handledItem:Use(position, raycastResult.Normal)
+
+				WorldManager:Insert(
+					Block.new(handledItem:GetBlock():GetID()):SetPosition(correctPos.X, correctPos.Y, correctPos.Z)
+				)
+
 				inventory:IncrementItemAtIndex(handledSlot, -1)
-			elseif isTool then
+			elseif handledItem:IsA("Tool") then
+				local positions: { Vector3 } = handledItem:Use(position, raycastResult.Normal)
+
+				local items = {}
+
 				if inventory:IsFullFilter(block:GetLoot()) and inventory:IsFull() then
 					return
 				end
 
-				local items = ToolManager(toolId, position, raycastResult.Normal)
+				for _, blockPosition in positions do
+					local block = WorldManager:GetBlock(blockPosition.X, blockPosition.Y, blockPosition.Z)
+
+					WorldManager:Delete(blockPosition.X, blockPosition.Y, blockPosition.Z)
+
+					local item = Item.new(block:GetLoot()):SetAmount(1)
+
+					table.insert(items, item)
+				end
+
 				for _, item in items do
 					inventory:AddItem(item)
 				end

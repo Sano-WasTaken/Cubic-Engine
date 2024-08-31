@@ -22,10 +22,11 @@ WorldManager.BlockRemoved:Connect(function(block)
 	CustomStats:IncrementStat("BlockCreated", -1)
 end)
 
+WorldManager.Decompressed:Wait()
+
 local chunks = WorldManager:GetChunks()
-
-task.wait(5) --// Wait a few seconds for nothing, just let the game load itself
-
+--task.wait(5) --// Wait a few seconds for nothing, just let the game load itself
+print(chunks)
 --local iterationsCount = 0
 
 local amountOfChunks = 0

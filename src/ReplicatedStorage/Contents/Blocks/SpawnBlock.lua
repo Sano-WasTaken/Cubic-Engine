@@ -5,6 +5,7 @@ local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 local SpawnBlock = {
 	Id = BlockEnum.SpawnBlock,
 	Textures = "rbxassetid://18724299526",
+	Mesh = Instance.new("SpawnLocation"),
 	Unbreakable = true,
 }
 

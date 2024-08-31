@@ -1,4 +1,4 @@
-local function new<T>(enumerator: T): T
+local function new(enumerator: {})
 	local inverse = {}
 
 	for i, v in enumerator do

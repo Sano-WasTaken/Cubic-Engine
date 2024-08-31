@@ -25,10 +25,6 @@ export type ItemProps = {
 
 function Item:init()
 	self.ColorBinding, self.ColorUpdate = Roact.createBinding(CELL_COLOR)
-
-	self:setState({
-		Dragged = false,
-	})
 end
 
 function Item:render()
@@ -36,16 +32,20 @@ function Item:render()
 
 	return Roact.createElement("ViewportFrame", {
 		[Roact.Ref] = function(viewport: ViewportFrame)
-			if viewport == nil or self.state.Dragged then
+			--print("ref update")
+			if viewport == nil then
 				return
 			end
 
 			if viewport:FindFirstChild("Appearence") then
 				viewport:FindFirstChild("Appearence"):Destroy()
+				print("destroy")
 			end
 
 			if props.Name then
 				local model, camera = GetMesh(props.Name)
+
+				model.Name = "Appearence"
 
 				if model == nil then
 					return

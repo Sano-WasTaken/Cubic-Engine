@@ -3,8 +3,8 @@ local BlockContent = require(ReplicatedStorage.Classes.BlockContent)
 local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 
 local Stone = {
-	Id = BlockEnum.Stone,
-	Textures = "rbxassetid://18640418536",
+	Id = BlockEnum.SandStone,
+	Textures = "rbxassetid://104604743278485",
 	--Unbreakable = true,
 }
 

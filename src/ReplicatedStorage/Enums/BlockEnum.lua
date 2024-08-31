@@ -8,11 +8,10 @@ return Enumerator.new({
 	"Dirt",
 	"SpawnBlock",
 	"SandStone",
+	"Coal_Ore",
 	"Iron_Ore",
 	"Copper_Ore",
 	"Gold_Ore",
-	"Silver_Ore",
 	"Iron_Block",
-	"Copper_Block",
-	"Gold_Block",
+	"Coal_Block",
 })
