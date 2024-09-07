@@ -7,7 +7,7 @@ local ServerStorage = game:GetService("ServerStorage")
 --// Modules
 local WorldManager = require(ServerStorage.Managers.WorldManager)
 local BlockDataProvider = require(ReplicatedStorage.Providers.BlockDataProvider)
-local CustomStats = require(ReplicatedStorage.Utils.CustomStats)
+--local CustomStats = require(ReplicatedStorage.Utils.CustomStats)
 
 --// Block folder
 local renderFolder = Instance.new("Folder")
@@ -48,16 +48,10 @@ local function createBlock(id: number): Part
 		return
 	end
 
-	local customProps = blockData.CustomProperties
+	local part = blockData:GetMeshClone()
 
-	local part = (customProps and customProps.Mesh ~= nil) and customProps.Mesh:Clone() or model:Clone()
-
-	if customProps then
-		-- if customProps.Size then end --TODO: calculous for the size
-		part.Material = customProps.Material or Enum.Material.Plastic
-		part.Color = customProps.Color3 or Color3.new(1, 1, 1)
-		part.Transparency = customProps.Transparency or part.Transparency
-	end
+	part.Material = blockData.Material or Enum.Material.Plastic
+	part.Color = blockData.Color or Color3.new(1, 1, 1)
 
 	return part
 end
@@ -66,7 +60,7 @@ local function createTexture(id: number, face: Enum.NormalId): Texture?
 	local texture = inew("Texture")
 	local blockData = BlockDataProvider:GetData(id)
 
-	if blockData.Textures == nil then
+	if blockData.Textures == nil or blockData.Textures == "" then
 		return
 	end
 
@@ -183,13 +177,6 @@ local function deleteBlock(block: WorldManager.Block)
 		end
 	end
 end
-
-function updateStat()
-	CustomStats:UpdateStat("BlockRendered", #renderFolder:GetChildren())
-end
-
-renderFolder.ChildAdded:Connect(updateStat)
-renderFolder.ChildRemoved:Connect(updateStat)
 
 return {
 	appendBlock = appendBlock,

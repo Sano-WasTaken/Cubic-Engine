@@ -6,11 +6,26 @@ local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 
 local defaultBuffer = BufferManager.new()
 
+-- buffered
+
+-- tabled
+--[[
+{
+	[1] = 0, -- id
+	[2] = x, -- x position
+	[3] = y, -- y position
+	[4] = z, -- z position
+	[5] = x, -- x orientation
+	[6] = y, -- y orientation
+	[7] = z, -- z orientation
+}
+]]
+
 defaultBuffer
 	:SetDataInBuffer("X", 4, "i")
 	:SetDataInBuffer("Y", 4, "i")
 	:SetDataInBuffer("Z", 4, "i")
-	:SetDataInBuffer("RX", 1, "u")
+	:SetDataInBuffer("RX", 1, "u") -- 1, 2, 3, 4
 	:SetDataInBuffer("RY", 1, "u")
 	:SetDataInBuffer("RZ", 1, "u")
 	:SetDataInBuffer("ID", 2, "u")
@@ -35,7 +50,7 @@ local function new(id: number?, buf: buffer?): IBlock
 	})
 
 	if id then
-		self.buffer:WriteData("ID", id)
+		self.buffer:WriteData("ID", id) -- id % 2^(8*2)
 	end
 
 	return self :: IBlock
@@ -79,6 +94,7 @@ function Block:GetID(): number
 	return buffer:ReadData("ID")
 end
 
+-- **Deprecated**: use `BlockContent` instead with associated lootTables
 function Block:GetLoot(): number?
 	local itemId = ItemEnum[BlockEnum[self:GetID()]]
 

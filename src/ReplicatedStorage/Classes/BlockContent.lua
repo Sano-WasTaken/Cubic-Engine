@@ -27,10 +27,13 @@ export type CanvasBlock = {
 	ClassName: string?,
 }
 
+local baseMesh = Instance.new("Part")
+baseMesh.Anchored = true
+
 local BlockContent = {
 	Id = 0,
 	Textures = "rbxassetid://18945254631",
-	Mesh = Instance.new("Part"),
+	Mesh = baseMesh,
 	Unbreakable = false,
 	BlockType = BlockTypeEnum.Block,
 	ClassName = "Block",
@@ -48,7 +51,16 @@ function BlockContent:GetTexture(): Textures
 end
 
 function BlockContent:IsA(className: string)
-	return self.ClassName == className
+	local function isA(obj: BlockContent): boolean
+		local meta = getmetatable(obj)
+		if meta == nil then
+			return obj.ClassName == className
+		else
+			return (meta.ClassName == className or obj.ClassName == className) and true or isA(meta)
+		end
+	end
+
+	return isA(self)
 end
 
 function BlockContent:GetID()
@@ -59,6 +71,7 @@ function BlockContent:GetMeshClone(): BasePart
 	local mesh: BasePart = self.Mesh:Clone()
 
 	mesh.Size = self.Size
+	mesh.Anchored = true
 
 	return mesh
 end
@@ -92,6 +105,15 @@ function BlockContent:AppendBlock(x: number, y: number, z: number, rx: number, r
 
 	WorldManager:Insert(block)
 end
+
+-- Server Only
+function BlockContent:tick()
+	print()
+end
+
+function BlockContent:GetLootTable() end
+
+function BlockContent:SetLootTable() end
 
 function BlockContent:UpdateContent(block: Block.IBlock, content: any)
 	warn(block, content, "are using but have no behavior, content should be nil in this case.")

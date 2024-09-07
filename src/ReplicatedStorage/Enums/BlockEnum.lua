@@ -14,4 +14,5 @@ return Enumerator.new({
 	"Gold_Ore",
 	"Iron_Block",
 	"Coal_Block",
+	"Test_Block"
 })

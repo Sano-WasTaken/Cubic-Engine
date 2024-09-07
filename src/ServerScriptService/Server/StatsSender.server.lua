@@ -11,7 +11,7 @@ local function getStatsInfo(): StatsNetwork.Stats
 	return {
 		Memory = Stats:GetTotalMemoryUsageMb(),
 		BlockCreated = CustomStats:GetStat("BlockCreated"),
-		BlockRendered = CustomStats:GetStat("BlockRendered"),
+		BlockRendered = #workspace:FindFirstChild("RenderFolder"):GetChildren(),
 	}
 end
 

@@ -92,7 +92,7 @@ function Chunk:GetBlockAtPosition(x: number, y: number, z: number): Block.IBlock
 	return block
 end
 
-function Chunk:Compress()
+function Chunk:Compress() -- TODO: see some optimisation here.
 	local size = 0
 	local blocks = {} :: { buffer }
 
@@ -152,7 +152,7 @@ end
 x, y, z aren't the block position in the world -> position in chunk !
 ]]
 function Chunk:Iterate(callback: (block: Block.IBlock) -> ())
-	local chunkPos = self.grid
+	local chunkPos = self.grid -- TODO: adding Lazy Iterators support! (= 10 times faster)
 
 	for _, i in chunkPos do
 		for _, j in i do

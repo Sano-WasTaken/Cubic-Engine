@@ -5,16 +5,24 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Block = require(ServerStorage.Classes.Block)
 local Signal = require(ReplicatedStorage.Classes.Signal)
 local Chunk = require(ServerStorage.Classes.Chunk)
-local DataProviderManager = require(ServerStorage.Managers.DataProviderManager)
+local TileEntitiesManager = require(ServerStorage.Managers.TileEntitiesManager)
+local DataProviderManager = require(ServerStorage.Managers.DatabaseManager)
 
 local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 
+-- [CLASS DECLARATION] --
+--
 local WorldManager = {
+	-- [ISLAND CONTENTS] --
+	--
 	Container = {
 		Chunks = {},
 		ExtraContent = {},
 	},
 	IslandOwner = nil :: Player?,
+
+	-- [SIGNALS] --
+	--
 	BlockAdded = Signal.new() :: Signal.Signal<Block>,
 	BlockRemoved = Signal.new() :: Signal.Signal<Block>,
 	ChunksGenerated = Signal.new() :: Signal.Signal<boolean>,
@@ -23,10 +31,8 @@ local WorldManager = {
 
 export type Block = Block.IBlock
 
-function WorldManager:GetChunks()
-	return self.Container.Chunks
-end
-
+-- [SIGNALS METHODS] --
+--
 function WorldManager:BlockAddedByIdSignal(id: number): Signal.Signal<Block>
 	local signal = Signal.new()
 
@@ -39,34 +45,23 @@ function WorldManager:BlockAddedByIdSignal(id: number): Signal.Signal<Block>
 	return signal
 end
 
-function WorldManager:DeleteContentFromBlock(block: Block)
-	local x, y, z = block:GetPosition()
+function WorldManager:BlockAddedInPosition(x: number, y: number, z: number): Signal.Signal<Block>
+	local signal = Signal.new()
 
-	local index = ("x=%iy=%iz=%i"):format(x, y, z)
+	self.BlockAdded:Connect(function(block)
+		local bx, by, bz = block:GetPosition()
+		if bx == x and by == y and bz == z then
+			signal:Fire(block)
+		end
+	end)
 
-	self.Container.ExtraContent[index] = nil
+	return signal
 end
 
-function WorldManager:SwapId(block: Block, id: number)
-	block:_setId(id)
-	self.BlockRemoved:Fire(block)
-	self.BlockAdded:Fire(block)
-end
-
-function WorldManager:RegisterBlockContent(block: Block, content: buffer)
-	local x, y, z = block:GetPosition()
-
-	local index = ("x=%iy=%iz=%i"):format(x, y, z)
-
-	self.Container.ExtraContent[index] = content
-end
-
-function WorldManager:GetBlockContent(block: Block): buffer?
-	local x, y, z = block:GetPosition()
-
-	local index = ("x=%iy=%iz=%i"):format(x, y, z)
-
-	return self.Container.ExtraContent[index]
+-- [CHUNKS UTILS] --
+--
+function WorldManager:GetChunks()
+	return self.Container.Chunks
 end
 
 function WorldManager:GetChunk(cx: number, cy: number)
@@ -81,19 +76,30 @@ function WorldManager:GetChunk(cx: number, cy: number)
 		chunks[tostring(cx)][tostring(cy)] = chunk
 	end
 
+	-- [[ you can add other schematics for chunks like custom chunks data organizing. ]] --
+
 	if typeof(chunk) == "buffer" then
 		chunk = Chunk.new(cx, cy, chunk)
 
 		chunks[tostring(cx)][tostring(cy)] = chunk
 	end
 
-	if typeof(chunk) == "string" then
+	-- If you want to use JSON Encoding for the chunk
+	--[[if typeof(chunk) == "string" then 
 		chunk = Chunk.new(cx, cy, HttpService:JSONDecode(chunk))
 
 		chunks[tostring(cx)][tostring(cy)] = chunk
-	end
+	end]]
 
 	return chunk
+end
+
+-- [BLOCKS UTILS] --
+--
+function WorldManager:SwapId(block: Block, id: number)
+	block:_setId(id)
+	self.BlockRemoved:Fire(block)
+	self.BlockAdded:Fire(block)
 end
 
 function WorldManager:GetBlock(x: number, y: number, z: number)
@@ -121,7 +127,7 @@ end
 function WorldManager:Insert(block: Block)
 	local x, y, z = block:GetPosition()
 
-	if self:IsBlockExist(x, y, z) then
+	if self:IsBlockExist(x, y, z) then -- what the hell is this thing... (just checking this position)
 		return
 	end
 
@@ -131,7 +137,7 @@ function WorldManager:Insert(block: Block)
 
 	x, y, z = Chunk.getBlockPositionInChunk(x, y, z)
 
-	local success = chunk:InsertBlock(block, x, y, z)
+	local success = chunk:InsertBlock(block, x, y, z) -- dono why i make this
 
 	if success then
 		self.BlockAdded:Fire(block)
@@ -151,7 +157,6 @@ function WorldManager:Delete(x: number, y: number, z: number)
 		return
 	end
 
-	self:DeleteContentFromBlock(block)
 	chunk:DeleteBlock(x, y, z)
 
 	self.BlockRemoved:Fire(block)
@@ -177,6 +182,8 @@ function WorldManager:GetNeighbors(x: number, y: number, z: number)
 	return neighbors
 end
 
+-- [DATA DECOMPRESSION/COMPRESSION] --
+--
 function WorldManager:DecompressChunks(compressedChunks: { [string]: { buffer } })
 	local chunks = self.Container.Chunks
 
@@ -206,6 +213,8 @@ function WorldManager:GetCompressedChunks()
 	return compressedChunk
 end
 
+-- [OWNER STATE] --
+--
 function WorldManager:SetOwner(player: Player)
 	self.IslandOwner = player
 end
@@ -224,6 +233,23 @@ function WorldManager:Init(island: DataProviderManager.Island)
 	self.Decompressed:Fire(true)
 end
 
+function WorldManager:GetIslandData(): DataProviderManager.Island
+	return {
+		Chunks = self:GetCompressedChunks(),
+		--ExtraContent = self.Container.ExtraContent, -- TODO: create management for this
+	}
+end
+
+function WorldManager:Save()
+	if self:IsPlayerIsland() then
+		local data = self:GetIslandData()
+
+		warn("total bytes saved:", HttpService:JSONEncode(data):len() .. " bytes")
+		DataProviderManager:SaveIslandData(self:GetOwner().UserId, data)
+	end
+end
+
+-- [WAITING FOR METHODS] --
 function WorldManager:WaitForOwner()
 	local owner = self:GetOwner()
 
@@ -247,36 +273,22 @@ function WorldManager:WaitForDecompression()
 	return self.Decompressed:Wait()
 end
 
-function WorldManager:GetIslandData(): DataProviderManager.Island
-	return {
-		Chunks = self:GetCompressedChunks(),
-		ExtraContent = self.Container.ExtraContent, -- TODO: create management for this
-	}
-end
+do -- [just bc i want netsing the code nvm] --
+	-- Auto Save
+	coroutine.wrap(function()
+		if WorldManager:IsPlayerIsland() then
+			while true do
+				task.wait(5 * 60)
 
--- Auto Save
-function WorldManager:Save()
-	if self:IsPlayerIsland() then
-		local data = self:GetIslandData()
-
-		warn("total bytes saved:", HttpService:JSONEncode(data):len() .. " bytes")
-		DataProviderManager:SaveIslandData(self:GetOwner().UserId, data)
-	end
-end
-
-coroutine.wrap(function()
-	if WorldManager:IsPlayerIsland() then
-		while true do
-			task.wait(5 * 60)
-
-			WorldManager:Save()
+				WorldManager:Save()
+			end
 		end
-	end
-end)()
+	end)()
 
--- Bind to close
-game:BindToClose(function()
-	WorldManager:Save()
-end)
+	-- Bind to close
+	game:BindToClose(function()
+		WorldManager:Save()
+	end)
+end
 
 return WorldManager

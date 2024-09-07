@@ -8,6 +8,7 @@ local BlockRenderManager = require(ServerStorage.Managers.BlockRenderManager)
 --local Chunk = require(ServerStorage.Classes.Chunk)
 local LoadingScreenNetwork = require(ReplicatedStorage.Networks.LoadingScreenNetwork)
 local CustomStats = require(ReplicatedStorage.Utils.CustomStats)
+local ExecutionTimer = require(ReplicatedStorage.Utils.ExecutionTimer)
 
 local IncrementLS = LoadingScreenNetwork.IncrementLoadingBar:Server()
 local LoadingS = LoadingScreenNetwork.LoadingSucceed:Server()
@@ -48,7 +49,7 @@ local function iterateThroughChunk(cx: number, cy: number)
 		CustomStats:IncrementStat("BlockCreated", 1)
 
 		if amountOfBlocks % 1500 == 0 then
-			task.wait()
+			task.wait(ExecutionTimer:GetDeltaTime() * 10)
 			--IncrementLS:FireAll(loadedChunks, amountOfChunks)
 		end
 
@@ -56,6 +57,7 @@ local function iterateThroughChunk(cx: number, cy: number)
 	end)
 end
 
+local start = os.clock()
 for x, rows in chunks do
 	for y, _ in rows do
 		iterateThroughChunk(tonumber(x), tonumber(y))
@@ -65,6 +67,7 @@ for x, rows in chunks do
 		IncrementLS:FireAll(loadedChunks, amountOfChunks)
 	end
 end
+print("Blocks loaded in:", os.clock() - start, "for", #workspace:FindFirstChild("RenderFolder"):GetChildren(), "blocks")
 
 WorldManager.ChunksGenerated:Fire(true)
 LoadingS:FireAll()

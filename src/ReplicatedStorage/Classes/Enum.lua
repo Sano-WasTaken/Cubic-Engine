@@ -1,15 +1,14 @@
-local function new(enumerator: {})
+local function new(enumerator: { string })
 	local inverse = {}
 
 	for i, v in enumerator do
 		inverse[v] = i
 	end
-
-	local self = setmetatable(enumerator, {
+	enumerator = setmetatable(enumerator, {
 		__index = inverse,
 	})
 
-	return self
+	return enumerator
 end
 
 return {
