@@ -5,10 +5,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Block = require(ServerStorage.Classes.Block)
 local Signal = require(ReplicatedStorage.Classes.Signal)
 local Chunk = require(ServerStorage.Classes.Chunk)
-local TileEntitiesManager = require(ServerStorage.Managers.TileEntitiesManager)
+--local TileEntitiesManager = require(ServerStorage.Managers.TileEntitiesManager)
 local DataProviderManager = require(ServerStorage.Managers.DatabaseManager)
 
 local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
+local ExecutionTimer = require(ReplicatedStorage.Utils.ExecutionTimer)
 
 -- [CLASS DECLARATION] --
 --
@@ -21,6 +22,10 @@ local WorldManager = {
 	},
 	IslandOwner = nil :: Player?,
 
+	-- [OTHER VALUES] --
+	--
+	IsGenerated = false,
+
 	-- [SIGNALS] --
 	--
 	BlockAdded = Signal.new() :: Signal.Signal<Block>,
@@ -28,6 +33,10 @@ local WorldManager = {
 	ChunksGenerated = Signal.new() :: Signal.Signal<boolean>,
 	Decompressed = Signal.new() :: Signal.Signal<boolean>,
 }
+
+WorldManager.ChunksGenerated:Connect(function()
+	WorldManager.IsGenerated = true
+end)
 
 export type Block = Block.IBlock
 
@@ -64,7 +73,7 @@ function WorldManager:GetChunks()
 	return self.Container.Chunks
 end
 
-function WorldManager:GetChunk(cx: number, cy: number)
+function WorldManager:GetChunk(cx: number, cy: number): Chunk.Chunk?
 	local chunks = self:GetChunks()
 
 	chunks[tostring(cx)] = chunks[tostring(cx)] or {}
@@ -189,8 +198,10 @@ function WorldManager:DecompressChunks(compressedChunks: { [string]: { buffer } 
 
 	for cx, rows in compressedChunks do
 		for cy, chunk in rows do
+			--print(chunk)
+			task.wait(ExecutionTimer:GetDeltaTime() * 10)
+
 			chunks[cx] = chunks[cx] or {}
-			task.wait()
 
 			chunk = Chunk.new(tonumber(cx), tonumber(cy), chunk)
 
@@ -204,6 +215,9 @@ function WorldManager:GetCompressedChunks()
 
 	for cx, rows in self:GetChunks() do
 		for cy, chunk in rows do
+			--print(chunk)
+			task.wait(ExecutionTimer:GetDeltaTime() * 10)
+
 			compressedChunk[cx] = compressedChunk[cx] or {}
 
 			compressedChunk[cx][cy] = chunk:Compress()
@@ -230,6 +244,9 @@ end
 function WorldManager:Init(island: DataProviderManager.Island)
 	self:DecompressChunks(island.Chunks)
 
+	--task.wait(ExecutionTimer:GetDeltaTime() * 1000)
+	print("decompressed !")
+
 	self.Decompressed:Fire(true)
 end
 
@@ -244,7 +261,16 @@ function WorldManager:Save()
 	if self:IsPlayerIsland() then
 		local data = self:GetIslandData()
 
-		warn("total bytes saved:", HttpService:JSONEncode(data):len() .. " bytes")
+		local bufSizes = 0
+
+		for _, rows in data.Chunks do
+			for _, buf in rows do
+				bufSizes += buffer.len(buf)
+			end
+		end
+
+		warn("total bytes saved:", HttpService:JSONEncode(data):len() .. " bytes encoded [base64 JSONEncode]")
+		warn("total bytes saved:", bufSizes .. " bytes non encoded [base64 JSONEncode]")
 		DataProviderManager:SaveIslandData(self:GetOwner().UserId, data)
 	end
 end

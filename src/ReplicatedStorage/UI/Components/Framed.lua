@@ -16,8 +16,8 @@ return function(props: FrameProps, children: { [string | number]: Roact.Element 
 		UIStroke = Roact.createElement("UIStroke", {
 			Thickness = 1,
 			Color = Color3.fromHex("FFFFFF"),
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 		}),
-		UIDragDetector = Roact.createElement("UIDragDetector"),
 		UIPadding = Roact.createElement("UIPadding", {
 			PaddingBottom = UDim.new(0, props.Padding),
 			PaddingLeft = UDim.new(0, props.Padding),

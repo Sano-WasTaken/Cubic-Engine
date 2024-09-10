@@ -3,10 +3,15 @@ local BlockContent = require(ReplicatedStorage.Classes.BlockContent)
 local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 
 local class: BlockContent.CanvasBlock = {
-	Id = BlockEnum["Test_Block"],
-	Textures = "",
-	Color = Color3.fromRGB(255, 77, 0),
-	Material = Enum.Material.Neon,
+	Id = BlockEnum["Oak_Log"],
+	Textures = {
+		Top = "rbxassetid://94405399115678",
+		Back = "rbxassetid://103530721217139",
+		Bottom = "rbxassetid://94405399115678",
+		Front = "rbxassetid://103530721217139",
+		Right = "rbxassetid://103530721217139",
+		Left = "rbxassetid://103530721217139",
+	},
 }
 
 return BlockContent.Class:extends(class)

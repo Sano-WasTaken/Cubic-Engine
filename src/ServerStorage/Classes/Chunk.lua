@@ -1,10 +1,18 @@
 local HttpService = game:GetService("HttpService")
+--local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Block = require(script.Parent.Block)
+--local ExecutionTimer = require(ReplicatedStorage.Utils.ExecutionTimer)
 
 local Chunk = {}
 
-local CHUNK_SIZE = Vector3.new(16, 512, 16)
+local CHUNK_SIZE = Vector3.new(16, 256, 16) -- 131072
+local OCCURENCE_SIZE = 2 ^ 16 -- 65536
+
+local bufcopy = buffer.copy
+local bufwriteu16 = buffer.writeu16
+local bufreadu16 = buffer.readu16
+
 local MaxChunks = 16
 
 local function getMaxCoordinate(): (number, number)
@@ -25,9 +33,45 @@ local function verify(x: number, y: number, z: number): boolean
 	return (x < CHUNK_SIZE.X and x >= 0 and y < CHUNK_SIZE.Y and y >= 0 and z < CHUNK_SIZE.Z and z >= 0)
 end
 
+local function writeOccurences(buf: buffer, id: number, occurences: number)
+	local len = buffer.len(buf)
+
+	local newBuf = buffer.create(len + 4)
+
+	bufcopy(newBuf, 0, buf, 0, len)
+
+	bufwriteu16(newBuf, len, id)
+	bufwriteu16(newBuf, len + 2, occurences)
+
+	return newBuf
+end
+
+local function getOccurences(buf: buffer, i: number)
+	local occ = bufreadu16(buf, i + 2)
+
+	occ = occ == 0 and OCCURENCE_SIZE or occ
+
+	return bufreadu16(buf, i), occ, 4
+end
+
+local function getPointerToCoordinates(x: number, y: number, z: number): number
+	local j = x + z * CHUNK_SIZE.X + y * (CHUNK_SIZE.X * CHUNK_SIZE.Z)
+
+	return j
+end
+
+local function getCoordinatesFromPointer(pointer: number)
+	local x = pointer % CHUNK_SIZE.X
+	local y = pointer // (CHUNK_SIZE.X * CHUNK_SIZE.Z)
+	local z = (pointer % (CHUNK_SIZE.X * CHUNK_SIZE.Z)) // CHUNK_SIZE.Z
+
+	return x, y, z
+end
+
 local function new(x: number, y: number, buf: buffer?)
 	local self = setmetatable({
-		grid = {},
+		buffer = buffer.create(CHUNK_SIZE.X * CHUNK_SIZE.Y * CHUNK_SIZE.Z * 2),
+		encoded = buf,
 		x = x,
 		y = y,
 		amount = 0,
@@ -35,38 +79,33 @@ local function new(x: number, y: number, buf: buffer?)
 		__index = Chunk,
 	})
 
-	if buf and buffer.len(buf) % 17 == 0 then
+	if buf then
 		self:_decompress(buf)
 	end
 
 	return self
 end
 
-function Chunk:_setBlockInPosition(x: number, y: number, z: number, block: Block.IBlock)
-	local chunkPos = self.grid
-	local _, buffer = block:GetBuffer()
+function Chunk:_setBlockInPosition(pointer: number, id: number)
+	local blockBuf = buffer.create(2)
+	bufwriteu16(blockBuf, 0, id)
 
-	chunkPos[x] = chunkPos[x] or {}
-	chunkPos[x][y] = chunkPos[x][y] or {}
-	chunkPos[x][y][z] = buffer
+	bufcopy(self.buffer, pointer * 2, blockBuf, 0, 2)
 end
 
 function Chunk:_deleteBlockInPosition(x: number, y: number, z: number)
-	local chunkPos = self.grid
+	local pointer = getPointerToCoordinates(x, y, z)
 
-	if chunkPos[x] and chunkPos[x][y] and chunkPos[x][y][z] then
-		self.amount -= 1
-
-		chunkPos[x][y][z] = nil
-	end
+	buffer.fill(self.buffer, pointer * 2, 0, 2)
 end
 
 function Chunk:_getBlockInPosition(x: number, y: number, z: number): Block.IBlock?
-	local chunkPos = self.grid
+	local pointer = getPointerToCoordinates(x, y, z)
 
-	if chunkPos[x] and chunkPos[x][y] and chunkPos[x][y][z] then
-		return chunkPos[x][y][z]
-	end
+	--print(buffer.len(self.buffer), pointer * 2, x, y, z)
+	local id = buffer.readu16(self.buffer, pointer * 2)
+
+	return Block.new(id):SetPosition(x + (CHUNK_SIZE.X * self.x), y, z + (CHUNK_SIZE.Z * self.y))
 end
 
 function Chunk:GetAmountOfBlock(): number
@@ -81,55 +120,70 @@ function Chunk:GetBlockAtPosition(x: number, y: number, z: number): Block.IBlock
 		return
 	end
 
-	local buf = self:_getBlockInPosition(x, y, z)
+	local block = self:_getBlockInPosition(x, y, z)
 
-	if buf == nil then
+	if block:GetID() == 0 then
 		return
 	end
-
-	local block = Block.new(nil, buf)
 
 	return block
 end
 
-function Chunk:Compress() -- TODO: see some optimisation here.
-	local size = 0
-	local blocks = {} :: { buffer }
+-- new Fast Occurences Compression (see RLE encoding)
+function Chunk:Compress()
+	local chunkBuffer = buffer.create(0)
+	local totalSize = CHUNK_SIZE.X * CHUNK_SIZE.Y * CHUNK_SIZE.Z
 
-	self:Iterate(function(block: Block.IBlock)
-		local _, buf = block:GetBuffer()
-		size += Block.BufferSize
-		table.insert(blocks, buf)
-	end)
+	local pointer, localId, occurences = 0, -1, 0
 
-	local buffurizedChunk = buffer.create(size)
+	while pointer < totalSize do
+		local id = bufreadu16(self.buffer, pointer * 2) -- block and block:GetID() or 0 -- unusable [si quelqu'un passe par la kill me pls]
 
-	for i, block in blocks do
-		local offset = (i - 1) * Block.BufferSize
+		if id == localId then
+			occurences += 1
+		else
+			if localId ~= -1 then
+				chunkBuffer = writeOccurences(chunkBuffer, localId, occurences)
+			end
+			localId = id
+			occurences = 1
+		end
 
-		buffer.copy(buffurizedChunk, offset, block, 0, Block.BufferSize)
+		pointer += 1
+
+		--[[if pointer % 10000 == 0 then
+			--task.wait(ExecutionTimer:GetDeltaTime() * 10) -- for debugging
+		end]]
 	end
 
-	return buffurizedChunk
+	chunkBuffer = writeOccurences(chunkBuffer, localId, occurences)
+
+	return chunkBuffer
 end
 
 function Chunk:_decompress(buffurizedChunk: buffer)
-	local size = buffer.len(buffurizedChunk) / Block.BufferSize
+	local totalSize = CHUNK_SIZE.X * CHUNK_SIZE.Y * CHUNK_SIZE.Z
 
-	self.amount = size
+	local localPointer, occurences = 0, 0
+	local id, occ, len = 0, 0, 0
 
-	for i = 0, size - 1 do
-		local block = buffer.create(Block.BufferSize)
+	while totalSize > occurences do
+		id, occ, len = getOccurences(buffurizedChunk, localPointer)
 
-		buffer.copy(block, 0, buffurizedChunk, i * Block.BufferSize, Block.BufferSize)
+		if id ~= 0 then
+			for j = occurences, occurences + occ - 1 do
+				--self:_setBlockInPosition(j, id) -- reducing __index metamethod
 
-		block = Block.new(nil, block)
+				local blockBuf = buffer.create(2)
+				buffer.writeu16(blockBuf, 0, id)
 
-		local x, y, z = block:GetPosition()
+				buffer.copy(self.buffer, j * 2, blockBuf, 0, 2)
+			end
+		end
 
-		x, y, z = getBlockPositionInChunk(x, y, z)
+		occurences += occ
 
-		self:_setBlockInPosition(x, y, z, block)
+		localPointer += len
 	end
 end
 
@@ -141,7 +195,9 @@ function Chunk:InsertBlock(block: Block.IBlock, x: number, y: number, z: number)
 		return false
 	end
 
-	self:_setBlockInPosition(x, y, z, block)
+	local pointer = getPointerToCoordinates(x, y, z)
+
+	self:_setBlockInPosition(pointer, block:GetID())
 
 	self.amount += 1
 
@@ -152,20 +208,24 @@ end
 x, y, z aren't the block position in the world -> position in chunk !
 ]]
 function Chunk:Iterate(callback: (block: Block.IBlock) -> ())
-	local chunkPos = self.grid -- TODO: adding Lazy Iterators support! (= 10 times faster)
+	local totalSize = CHUNK_SIZE.X * CHUNK_SIZE.Y * CHUNK_SIZE.Z
 
-	for _, i in chunkPos do
-		for _, j in i do
-			for _, k in j do
-				if k == nil then
-					continue
-				end
+	local id, pointer, block = 0, 0, nil
 
-				local block = Block.new(nil, k)
+	local x, y, z = 0, 0, 0
 
-				callback(block)
-			end
+	while pointer < totalSize do
+		id = bufreadu16(self.buffer, pointer * 2) -- block and block:GetID() or 0 -- unusable [si quelqu'un passe par la kill me pls]
+
+		if id ~= 0 then
+			x, y, z = getCoordinatesFromPointer(pointer)
+
+			block = Block.new(id):SetPosition(x + (CHUNK_SIZE.X * self.x), y, z + (CHUNK_SIZE.Z * self.y))
+
+			callback(block)
 		end
+
+		pointer += 1
 	end
 end
 
