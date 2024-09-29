@@ -4,8 +4,11 @@ local ServerStorage = game:GetService("ServerStorage")
 
 --local Inventory = require(ServerStorage.Classes)
 --local Item = require(ServerStorage.Classes.Item)
+local Item = require(ServerStorage.Components.Item)
+local PlayerInventory = require(ServerStorage.Components.PlayerInventory)
 local DataProviderManager = require(ServerStorage.Managers.DatabaseManager)
-local InventoryManager = require(ServerStorage.Managers.InventoryManager)
+local PlayerInventoryManager = require(ServerStorage.Managers.PlayerInventoryManager)
+--local InventoryManager = require(ServerStorage.Managers.InventoryManager)
 local InventoryNetwork = require(ReplicatedStorage.Networks.InventoryNetwork)
 
 local UpdateInventory = InventoryNetwork.UpdateInventory:Server()
@@ -14,60 +17,50 @@ local RequestEquipItem = InventoryNetwork.RequestEquipItem:Server()
 local RequestGiveItem = InventoryNetwork.RequestGiveItem:Server()
 local RequestClearInventory = InventoryNetwork.RequestClearInventory:Server()
 
---[[
+local function getInventory(player: Player)
+	local container = DataProviderManager:GetPlayerData(tostring(player.UserId)).Inventory
+
+	local inventory = PlayerInventory:create()
+
+	inventory:SetInventory(container)
+
+	return inventory
+end
+
 Players.PlayerAdded:Connect(function(player: Player)
-	local playerData = DataProviderManager:GetPlayerData(player.UserId)
+	local inventory = getInventory(player)
 
-	local buf = playerData.Inventory
-
-	local inventory = Inventory.new(4, 9, buf)
-
-	playerData.Inventory = inventory.buffer
-
-	InventoryManager.setInventory(player, inventory)
-
-	player.CharacterAdded:Connect(function(_: Model)
-		InventoryManager.setHandledSlot(player, 0)
-	end)
-
-	inventory.UpdateSignal:Connect(function()
-		UpdateInventory:Fire(player, inventory:GetFormattedItems())
-	end)
+	PlayerInventoryManager:Append(player, inventory)
 end)
 
 Players.PlayerRemoving:Connect(function(player: Player)
-	DataProviderManager:SavePlayerData(player.UserId)
-
-	InventoryManager.deleteInventory(player)
+	PlayerInventoryManager:Delete(player)
 end)
 
 InventoryNetwork.GetInventory:SetCallback(function(player, _: string?)
-	local inventory = InventoryManager.getInventory(player)
+	local inventory = getInventory(player)
 
-	return inventory:GetFormattedItems()
+	return inventory:GetInventory()
 end)
 
 RequestSwapItem:On(function(player: Player, _: string?, indexA: number, indexB: number)
-	local inventory = InventoryManager.getInventory(player)
-
-	inventory:SwapItems(indexA, indexB)
+	getInventory(player):SwapItems(player, indexA, indexB)
 end)
 
 RequestEquipItem:On(function(player: Player, index: number)
-	InventoryManager.setHandledSlot(player, index)
+	getInventory(player):SetSelectedSlot(player, index)
 end)
 
 RequestGiveItem:On(function(player: Player, id: number, amount: number)
-	local inventory = InventoryManager.getInventory(player)
+	local inventory = getInventory(player)
 
-	local item = Item.new(id):SetAmount(amount or 1)
+	local item = Item:create(id)
 
-	inventory:AddItem(item)
+	item:SetAmount(amount)
+
+	--inventory:
 end)
 
 RequestClearInventory:On(function(player: Player)
-	local inventory = InventoryManager.getInventory(player)
-
-	inventory:Clear()
+	getInventory(player):Clear()
 end)
-]]
