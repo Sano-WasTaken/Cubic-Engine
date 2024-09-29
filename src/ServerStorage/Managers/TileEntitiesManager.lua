@@ -113,17 +113,17 @@ function Manager:Delete(tileEntity: TileEntity)
 	self:_remove(tileEntity, context)
 end
 
-function Manager:GetTileEntityFromBlock(block: Block.IBlock, content: {}): TileEntity
+function Manager:GetTileEntityFromBlock(block: Block.IBlock, content: {}): TileEntity?
 	local id = block:GetID()
 
 	local TileEntityClass = Provider:GetData(id)
 
 	if TileEntityClass then
-		local x, y, z = block:GetPosition()
+		--local x, y, z = block:GetPosition()
 
-		content.Position = { x, y, z }
+		--content.Position = { x, y, z }
 
-		return TileEntityClass.new(content)
+		return TileEntityClass.new(content) :: TileEntity
 	end
 end
 

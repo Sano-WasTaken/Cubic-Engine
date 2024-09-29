@@ -1,23 +1,23 @@
 type StatsItem = "BlockCreated" | "Machines" | "BlockRendered"
 
-local Stats: {[StatsItem]: number} = {
-    BlockCreated = 0,
-    Machines = 0,
-    BlockRendered = 0,
+local Stats = {
+	BlockCreated = 0,
+	Machines = 0,
+	BlockRendered = 0,
 }
 
 function Stats:UpdateStat(name: StatsItem, value: any)
-    Stats[name] = value
+	Stats[name] = value
 end
 
-function Stats:GetStat(name: StatsItem)
-    return Stats[name] or 0
+function Stats:GetStat(name: StatsItem): number
+	return Stats[name] or 0
 end
 
 function Stats:IncrementStat(name: StatsItem, increment: number)
-    self[name] = self[name] or 0
+	self[name] = self[name] or 0
 
-    self[name] += increment
+	self[name] += increment
 end
 
 return Stats

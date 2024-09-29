@@ -4,7 +4,7 @@ local Red = require(ReplicatedStorage.Packages.Red)
 local EnumItem = require(ReplicatedStorage.Enums.ItemEnum)
 
 return {
-	GetInventory = Red.Function("GetInventory", function(id: string?)
+	GetInventory = Red.Function("GetInventory", function(id: string?): string?
 		return id
 	end, function(inventory: { any })
 		return inventory

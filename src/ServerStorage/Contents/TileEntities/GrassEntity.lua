@@ -9,9 +9,9 @@ local GrassEntity = TileEntity:extends({
 	ExecutionContext = "default",
 })
 
-local function new(content: {})
+function GrassEntity:create()
 	return setmetatable({
-		Content = content,
+		container = {},
 	}, { __index = GrassEntity })
 end
 
@@ -40,7 +40,4 @@ function GrassEntity:Tick(dt: number)
 	end
 end
 
-return {
-	new = new,
-	Class = GrassEntity,
-}
+return GrassEntity

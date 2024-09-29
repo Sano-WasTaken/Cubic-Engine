@@ -1,6 +1,6 @@
 local Queue = {}
 
-local function new<T>(): Queue<T>
+local function new()
 	return setmetatable({ container = {} }, {
 		__index = Queue,
 	})
@@ -23,11 +23,6 @@ function Queue:Retrieve(): any
 
 	return item
 end
-
-type Queue<T> = {
-	Insert: (self: Queue<T>, item: T) -> (),
-	Retrieve: (self: Queue<T>) -> T?,
-}
 
 return {
 	new = new,

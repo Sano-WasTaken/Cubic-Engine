@@ -1,4 +1,5 @@
 --!native
+--!nonstrict
 
 --// Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -29,19 +30,13 @@ local faces = {
 	[Vector3.new(-1, 0, 0)] = Enum.NormalId.Left,
 } :: { [Vector3]: Enum.NormalId }
 
---// The cloned Part
-local model = Instance.new("Part")
-model.Anchored = true
-model.Size = Vector3.one * BLOCK_SIZE
-model.Material = Enum.Material.Plastic
-
 --// Functions micro optimisation
 local cfnew = CFrame.new
 local inew = Instance.new
 local cfanew = CFrame.Angles
 
 --// Functions
-local function createBlock(id: number): Part
+local function createBlock(id: number): Part?
 	local blockData = BlockDataProvider:GetData(id)
 
 	if blockData == nil then
@@ -64,7 +59,9 @@ local function createTexture(id: number, face: Enum.NormalId): Texture?
 		return
 	end
 
-	texture.Texture = (type(blockData.Textures) == "string") and blockData.Textures or blockData.Textures[face.Name]
+	--
+	texture.Texture = (type(blockData.Textures) == "string") and blockData.Textures
+		or (blockData.Textures :: {})[face.Name]
 
 	texture.Face = face
 	texture.StudsPerTileU = BLOCK_SIZE -- + TEXTURE_PADDING
@@ -82,9 +79,11 @@ local function findBlock(x: number, y: number, z: number): Part?
 	if map[x] and map[x][y] and map[x][y][z] then
 		return map[x][y][z]
 	end
+
+	return nil
 end
 
-local function setBlock(x: number, y: number, z: number, part: Part)
+local function setBlock(x: number, y: number, z: number, part: Part?)
 	map[x] = map[x] or {}
 	map[x][y] = map[x][y] or {}
 
@@ -105,7 +104,7 @@ end
 
 local function appendBlock(block: WorldManager.Block)
 	local x, y, z = block:GetPosition()
-	local rx, ry, rz = block:GetOrientation()
+	--local rx, ry, rz = block:GetOrientation()
 	local id = block:GetID()
 
 	if id == 0 then
@@ -114,7 +113,7 @@ local function appendBlock(block: WorldManager.Block)
 
 	local part = createBlock(id)
 
-	part.CFrame = cfnew(Vector3.new(x, y, z) * 3) * cfanew(rx, ry, rz)
+	part.CFrame = cfnew(Vector3.new(x, y, z) * 3) -- * cfanew(rx, ry, rz)
 	part.Parent = renderFolder
 
 	setBlock(x, y, z, part)

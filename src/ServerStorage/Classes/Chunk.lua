@@ -13,7 +13,7 @@ local bufcopy = buffer.copy
 local bufwriteu16 = buffer.writeu16
 local bufreadu16 = buffer.readu16
 
-local MaxChunks = 16
+local MaxChunks = 25
 
 local function getMaxCoordinate(): (number, number)
 	return -MaxChunks, MaxChunks
@@ -71,7 +71,7 @@ end
 local function new(x: number, y: number, buf: buffer?)
 	local self = setmetatable({
 		buffer = buffer.create(CHUNK_SIZE.X * CHUNK_SIZE.Y * CHUNK_SIZE.Z * 2),
-		encoded = buf,
+		--encoded = buf,
 		x = x,
 		y = y,
 		amount = 0,
@@ -150,10 +150,6 @@ function Chunk:Compress()
 		end
 
 		pointer += 1
-
-		--[[if pointer % 10000 == 0 then
-			--task.wait(ExecutionTimer:GetDeltaTime() * 10) -- for debugging
-		end]]
 	end
 
 	chunkBuffer = writeOccurences(chunkBuffer, localId, occurences)
@@ -174,10 +170,10 @@ function Chunk:_decompress(buffurizedChunk: buffer)
 			for j = occurences, occurences + occ - 1 do
 				--self:_setBlockInPosition(j, id) -- reducing __index metamethod
 
-				local blockBuf = buffer.create(2)
-				buffer.writeu16(blockBuf, 0, id)
+				--local blockBuf = buffer.create(2)
+				buffer.writeu16(self.buffer, j * 2, id)
 
-				buffer.copy(self.buffer, j * 2, blockBuf, 0, 2)
+				--buffer.copy(self.buffer, j * 2, blockBuf, 0, 2) -- bro wtf?
 			end
 		end
 

@@ -1,4 +1,5 @@
 local DataStoreService = game:GetService("DataStoreService")
+local ServerStorage = game:GetService("ServerStorage")
 --local MemoryStoreService = game:GetService("MemoryStoreService")
 
 --local Players = game:GetService("Players")
@@ -19,7 +20,7 @@ List of scopes !
 
 export type Island = { Chunks: {}, ExtraContent: {} }
 export type PlayerData = {
-	Inventory: buffer?,
+	Inventory: {}, --: { [string]: Item.IItem },
 	Coins: number,
 }
 
@@ -111,7 +112,7 @@ function Manager:GetPlayerData(userId: string): PlayerData
 	local data
 
 	local template = {
-		Inventory = nil,
+		Inventory = {},
 		Coins = 0,
 	}
 

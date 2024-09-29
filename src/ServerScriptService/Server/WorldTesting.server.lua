@@ -3,7 +3,7 @@ local ServerStorage = game:GetService("ServerStorage")
 --local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 
-local DataProviderManager = require(ServerStorage.Managers.DataProviderManager)
+local DataProviderManager = require(ServerStorage.Managers.DatabaseManager)
 local WorldManager = require(ServerStorage.Managers.WorldManager)
 local Block = require(ServerStorage.Classes.Block)
 --local BlockDataProvider = require(ReplicatedStorage.Providers.BlockDataProvider)

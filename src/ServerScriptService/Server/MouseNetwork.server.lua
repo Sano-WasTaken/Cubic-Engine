@@ -5,17 +5,17 @@ local Raycast = require(ReplicatedStorage.Utils.MouseRaycast)
 local MouseNetwork = require(ReplicatedStorage.Networks.MouseNetwork)
 local InventoryManager = require(ServerStorage.Managers.InventoryManager)
 local WorldManager = require(ServerStorage.Managers.WorldManager)
-local Item = require(ServerStorage.Classes.Item)
+--local Item = require(ServerStorage.Classes.Item)
 local Block = require(ServerStorage.Classes.Block)
 
 local MouseRay = MouseNetwork.MouseRay:Server()
 
-local function verifyDistance(raycastResult: RaycastResult, player: Player): boolean
-	return (raycastResult.Position - player.Character:FindFirstChild("HumanoidRootPart").Position).Magnitude < 30
+local function verifyDistance(raycastResult: RaycastResult, character: Model & { HumanoidRootPart: Part }): boolean
+	return (raycastResult.Position - character.HumanoidRootPart.Position).Magnitude < 30
 end
 
---TODO: demain tu refactoring tout ça pd
-MouseRay:On(function(player: Player, ray: Ray)
+--TODO: demain tu refactoring tout ça pd, t'es vraiment un golmond connard!
+--[[MouseRay:On(function(player: Player, ray: Ray)
 	local raycastResult = Raycast.Raycast(ray, 500, player.Character:GetChildren())
 
 	if raycastResult and raycastResult.Instance and verifyDistance(raycastResult, player) then
@@ -69,7 +69,7 @@ MouseRay:On(function(player: Player, ray: Ray)
 			end
 		end
 	end
-end)
+end)]]
 
 --[[
 pose:On(function(player: Player, ray: Ray)

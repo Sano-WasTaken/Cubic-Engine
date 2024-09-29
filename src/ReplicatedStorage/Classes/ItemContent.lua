@@ -1,4 +1,5 @@
 local RunService = game:GetService("RunService")
+local Object = require(script.Parent.Object)
 
 local function assertContext()
 	assert(RunService:IsServer(), "You should do this in server side .")
@@ -18,6 +19,8 @@ local ItemContent = {
 	ClassName = "Item",
 }
 
+setmetatable(ItemContent, { __index = Object })
+
 export type ItemContent = typeof(ItemContent)
 
 function ItemContent:GetClonedMesh(): BasePart
@@ -26,19 +29,6 @@ end
 
 function ItemContent:IsUsable()
 	return self.Use ~= nil
-end
-
-function ItemContent:IsA(className: string)
-	local function isA(obj: ItemContent): boolean
-		local meta = getmetatable(obj)
-		if meta == nil then
-			return obj.ClassName == className
-		else
-			return (meta.ClassName == className or obj.ClassName == className) and true or isA(meta)
-		end
-	end
-
-	return isA(self)
 end
 
 function ItemContent:GetID()

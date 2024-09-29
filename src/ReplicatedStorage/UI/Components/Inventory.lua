@@ -1,81 +1,205 @@
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Fusion = require(ReplicatedStorage.Packages.Fusion)
+local ScaleController = require(ReplicatedStorage.UI.Controllers.ScaleController)
+local GetMesh = require(ReplicatedStorage.UI.Utils.GetMesh)
 
-local Roact = require(ReplicatedStorage.Packages.Roact)
-local Item = require(ReplicatedStorage.UI.Components.Item)
+local Children = Fusion.Children
+local OnEvent = Fusion.OnEvent
 
-local Inventory = Roact.Component:extend("Inventory")
-
-local PADDING = 5
-local PADDING_CELL = 5
-local CELL_SIZE = 60
-local BACKGROUND_COLOR = Color3.fromHex("#333340")
-
-export type InventoryProps = {
-	Rows: number,
-	Columns: number,
-	Scale: number,
-	Position: UDim2,
-	Items: { any },
-	Offset: number,
-	AnchorPoint: Vector2?,
-	SelectedSlot: number,
-	Event: {
-		Clicked: (rbx: ViewportFrame, props: Item.ItemProps) -> (),
-		Hovered: (rbx: ViewportFrame, props: Item.ItemProps) -> (),
-		Leaved: (rbx: ViewportFrame) -> (),
-	},
+local Inventory = {
+	Scope = Fusion.scoped(Fusion),
+	UI = nil :: Instance?,
+	Slots = {},
+	Inventory = {},
 }
 
-function Inventory:render()
-	local props: InventoryProps = self.props
+local function createSlot(scope, slotValue, index)
+	return scope:Computed(function(use, _)
+		use(slotValue)
 
-	local items = {}
+		local item = Inventory.Inventory[index]
 
-	for i = 1 + props.Offset, props.Columns * props.Rows + props.Offset do
-		local item = props.Items[i] or {}
+		local part, camera
 
-		local itemProps: Item.ItemProps = {
-			Amount = item.Amount or 0,
-			Events = props.Event,
-			Name = item.Name,
-			Index = i,
-			Selected = i == props.SelectedSlot,
-		}
+		if item then
+			part, camera = GetMesh(item.ID)
+		end
 
-		local element = Roact.createElement(Item, itemProps)
+		return scope:New("ImageButton")({
+			Size = UDim2.fromOffset(32, 32),
+			LayoutOrder = index,
+			ResampleMode = Enum.ResamplerMode.Pixelated,
+			Image = "rbxassetid://123167957040866",
+			BackgroundTransparency = 1,
+			[Children] = {
+				scope:New("ViewportFrame")({
+					Transparency = 1,
+					Size = UDim2.fromOffset(30, 30),
+					AnchorPoint = Vector2.new(0.5, 0.5),
+					Position = UDim2.fromScale(0.5, 0.5),
+					CurrentCamera = camera,
+					[Children] = {
+						part,
+					},
+				}),
+			},
+			[OnEvent("Activated")] = function()
+				--Inventory:SetSelectedSlot(index)
+			end,
+		})
+	end)
+end
 
-		table.insert(items, element)
+function Inventory:createInventorySlots()
+	local scope = Inventory.Scope
+	local slots = {}
+
+	--local items = scope.peek(Inventory.Inventory)
+
+	for i = 1, 9 * 3 do
+		local item: { ID: number, Amount: number }? = Inventory.Inventory[i]
+
+		local slotValue = scope:Value(item)
+
+		Inventory.Slots[i] = slotValue
+
+		slots[i] = createSlot(scope, slotValue, i)
 	end
 
-	local fragment = Roact.createFragment(items)
+	return slots
+end
 
-	return Roact.createElement("Frame", {
-		Size = UDim2.fromOffset(
-			2 * PADDING + (props.Columns - 1) * PADDING_CELL + props.Columns * CELL_SIZE,
-			2 * PADDING + (props.Rows - 1) * PADDING_CELL + props.Rows * CELL_SIZE
-		),
-		Position = props.Position,
-		AnchorPoint = props.AnchorPoint or Vector2.new(0.5, 0.5),
-		BackgroundColor3 = BACKGROUND_COLOR,
-		BorderSizePixel = 0,
-	}, {
-		UIScale = Roact.createElement("UIScale", {
-			Scale = props.Scale,
-		}),
-		UIGridLayout = Roact.createElement("UIGridLayout", {
-			CellSize = UDim2.fromOffset(CELL_SIZE, CELL_SIZE),
-			CellPadding = UDim2.fromOffset(PADDING_CELL, PADDING_CELL),
-			SortOrder = Enum.SortOrder.LayoutOrder,
-		}),
-		UIPadding = Roact.createElement("UIPadding", {
-			PaddingBottom = UDim.new(0, PADDING),
-			PaddingLeft = UDim.new(0, PADDING),
-			PaddingRight = UDim.new(0, PADDING),
-			PaddingTop = UDim.new(0, PADDING),
-		}),
-		UICorner = Roact.createElement("UICorner", { CornerRadius = UDim.new(0, 10) }),
-		Fragment = fragment,
+function Inventory:createHotbarSlots()
+	local scope = Inventory.Scope
+	local slots = {}
+
+	--local items = scope.peek(Inventory.Inventory)
+
+	for i = 9 * 3 + 1, 9 * 4 do
+		local item: { ID: number, Amount: number }? = Inventory.Inventory[i]
+
+		local slotValue = scope:Value(item)
+
+		Inventory.Slots[i] = slotValue
+
+		slots[i] = createSlot(scope, slotValue, i)
+	end
+
+	return slots
+end
+
+function Inventory:Init(inventory: {})
+	assert(Inventory.UI == nil, "do not call this twice.")
+	local scope = Inventory.Scope
+
+	Inventory.Inventory = inventory
+
+	local scale = ScaleController(scope, 2.5)
+
+	Inventory.UI = scope:New("ScreenGui")({
+		ResetOnSpawn = false,
+		Name = "Inventory",
+		[Children] = {
+			scope:New("Frame")({
+				Name = "Container",
+				Size = UDim2.fromOffset(320, 161),
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.55),
+				Transparency = 1,
+				[Children] = {
+					scope:New("UIScale")({
+						Scale = scale,
+					}),
+					scope:New("ImageLabel")({
+						Name = "Inventory",
+						Size = UDim2.fromOffset(320, 113),
+						Image = "rbxassetid://92331130126620",
+						ResampleMode = Enum.ResamplerMode.Pixelated,
+						BackgroundTransparency = 1,
+						[Children] = {
+							scope:New("UIGridLayout")({
+								CellSize = UDim2.fromOffset(32, 32),
+								SortOrder = Enum.SortOrder.LayoutOrder,
+								CellPadding = UDim2.fromOffset(3, 3),
+							}),
+							scope:New("UIPadding")({
+								PaddingBottom = UDim.new(0, 7),
+								PaddingTop = UDim.new(0, 4),
+								PaddingLeft = UDim.new(0, 4),
+								PaddingRight = UDim.new(0, 4),
+							}),
+							Inventory:createInventorySlots(),
+						},
+					}),
+
+					scope:New("ImageLabel")({
+						Name = "Hotbar",
+						Size = UDim2.fromOffset(320, 43),
+						AnchorPoint = Vector2.new(0, 1),
+						Position = UDim2.fromScale(0, 1),
+						Image = "rbxassetid://112942053039694",
+						ResampleMode = Enum.ResamplerMode.Pixelated,
+						BackgroundTransparency = 1,
+						[Children] = {
+							scope:New("UIGridLayout")({
+								CellSize = UDim2.fromOffset(32, 32),
+								SortOrder = Enum.SortOrder.LayoutOrder,
+								CellPadding = UDim2.fromOffset(3, 3),
+							}),
+							scope:New("UIPadding")({
+								PaddingBottom = UDim.new(0, 7),
+								PaddingTop = UDim.new(0, 4),
+								PaddingLeft = UDim.new(0, 4),
+								PaddingRight = UDim.new(0, 4),
+							}),
+							Inventory:createHotbarSlots(),
+						},
+					}),
+					--Inventory:createSlots(),
+				},
+			}),
+		},
 	})
+end
+
+function Inventory:Update(inventory: {})
+	assert(Inventory.UI ~= nil, "must init the UI before toggling")
+	local oldInv = Inventory.Inventory
+
+	Inventory.Inventory = inventory
+
+	for i, item in inventory do
+		local slot = Inventory.Slots[i]
+
+		if slot then
+			slot:set(item)
+		end
+	end
+
+	for i, _ in oldInv do
+		if inventory[i] == nil then
+			local slot = Inventory.Slots[i]
+
+			if slot then
+				slot:set(nil)
+			end
+		end
+	end
+
+	--Inventory.Inventory:set(inventory)
+end
+
+function Inventory:Visible()
+	assert(Inventory.UI ~= nil, "must init the UI before toggling")
+
+	Inventory.UI.Parent = Players.LocalPlayer.PlayerGui
+end
+
+function Inventory:Invisible()
+	assert(Inventory.UI ~= nil, "must init the UI before toggling")
+
+	Inventory.UI.Parent = nil
 end
 
 return Inventory

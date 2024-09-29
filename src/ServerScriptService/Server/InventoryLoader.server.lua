@@ -2,9 +2,9 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
-local Inventory = require(ServerStorage.Classes.Inventory)
-local Item = require(ServerStorage.Classes.Item)
-local DataProviderManager = require(ServerStorage.Managers.DataProviderManager)
+--local Inventory = require(ServerStorage.Classes)
+--local Item = require(ServerStorage.Classes.Item)
+local DataProviderManager = require(ServerStorage.Managers.DatabaseManager)
 local InventoryManager = require(ServerStorage.Managers.InventoryManager)
 local InventoryNetwork = require(ReplicatedStorage.Networks.InventoryNetwork)
 
@@ -14,6 +14,7 @@ local RequestEquipItem = InventoryNetwork.RequestEquipItem:Server()
 local RequestGiveItem = InventoryNetwork.RequestGiveItem:Server()
 local RequestClearInventory = InventoryNetwork.RequestClearInventory:Server()
 
+--[[
 Players.PlayerAdded:Connect(function(player: Player)
 	local playerData = DataProviderManager:GetPlayerData(player.UserId)
 
@@ -69,3 +70,4 @@ RequestClearInventory:On(function(player: Player)
 
 	inventory:Clear()
 end)
+]]

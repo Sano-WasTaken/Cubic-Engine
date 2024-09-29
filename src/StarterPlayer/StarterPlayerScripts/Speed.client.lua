@@ -6,8 +6,8 @@ local character = player.Character or player.CharacterAdded:Wait()
 local DEFAULT_SPEED = 16
 local SPEED_MULTIPLIER = 1.4
 
-player.CharacterAdded:Connect(function(character)
-	character = character
+player.CharacterAdded:Connect(function(_character)
+	character = _character
 end)
 
 UserInputService.InputBegan:Connect(function(input, _)

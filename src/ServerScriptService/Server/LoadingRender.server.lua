@@ -58,9 +58,9 @@ local function iterateThroughChunk(cx: number, cy: number)
 end
 
 local start = os.clock()
-for x, rows in chunks do
-	for y, _ in rows do
-		iterateThroughChunk(tonumber(x), tonumber(y))
+for x: string, rows in chunks do
+	for y: string, _ in rows do
+		iterateThroughChunk(tonumber(x) :: number, tonumber(y) :: number)
 		loadedChunks += 1
 
 		task.wait()

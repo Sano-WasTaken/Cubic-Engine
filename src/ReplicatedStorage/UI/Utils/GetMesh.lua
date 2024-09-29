@@ -3,8 +3,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ItemDataProvider = require(ReplicatedStorage.Providers.ItemDataProvider)
 local ItemEnum = require(ReplicatedStorage.Enums.ItemEnum)
 
-local function GetMesh(name: string): (BasePart, Camera)
-	local data = ItemDataProvider:GetData(ItemEnum[name])
+local function GetMesh(id: number): (BasePart?, Camera?)
+	--assert(ItemEnum[id] ~= nil, "no item")
+
+	local data = ItemDataProvider:GetData(id)
 
 	if data == nil then
 		return --Instance.new("Part")

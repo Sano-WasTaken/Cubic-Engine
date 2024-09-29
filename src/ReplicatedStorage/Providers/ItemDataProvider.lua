@@ -9,6 +9,7 @@ local BlockItemContent = require(ReplicatedStorage.Classes.BlockItemContent)
 local items = ReplicatedStorage.Contents.Items
 
 type ItemDataProvider = DataProvider.DataProvider<ItemContent.ItemContent>
+export type ItemContent = ItemContent.ItemContent
 
 local ItemDataProvider: ItemDataProvider = DataProvider.new(ItemEnum)
 

@@ -66,7 +66,7 @@ local function DrawPolygon(
 		local x2 = xo + math.cos(math.rad(b)) * r
 		local y2 = yo + math.sin(math.rad(b)) * r
 
-		DrawLine({ x = x1, y = 0, z = y1 }, { x = x2, y = 0, z = y2 }, function(x: number, _, z: number): nil
+		DrawLine({ x = x1, y = 0, z = y1 }, { x = x2, y = 0, z = y2 }, function(x: number, _, z: number)
 			callback(x + xo, z + yo)
 		end)
 	end
@@ -91,10 +91,54 @@ local function DrawCuboid(
 	end
 end
 
+function DrawSphere(r: number, offset: Vector3, callback: (x: number, y: number, z: number) -> nil, empty: boolean)
+	for x = -r, r do
+		for y = -r, r do
+			for z = -r, r do
+				local unit = math.floor(math.sqrt(x * x + y * y + z * z))
+				if (not empty and unit <= r) or unit == r then
+					callback(x + offset.X, y + offset.Y, z + offset.Z)
+				end
+			end
+		end
+	end
+end
+
+function DrawEllipsoid(
+	axis: Vector3,
+	offset: Vector3,
+	callback: (x: number, y: number, z: number) -> nil,
+	empty: boolean
+)
+	local thickness = 2
+
+	local a, b, c = axis.X, axis.Y, axis.Z
+	local inner_a, inner_b, inner_c = a - thickness, b - thickness, c - thickness
+
+	for x = -axis.X, axis.X do
+		for y = -axis.Y, axis.Y do
+			for z = -axis.Z, axis.Z do
+				local unit = ((x * x) / (a * a) + (y * y) / (b * b) + (z * z) / (c * c))
+				local innerUnit = (
+					(x * x) / (inner_a * inner_a)
+					+ (y * y) / (inner_b * inner_b)
+					+ (z * z) / (inner_c * inner_c)
+				)
+
+				if (not empty and unit <= 1) or (unit <= 1 and innerUnit >= 1) then
+					callback(x + offset.X, y + offset.Y, z + offset.Z)
+				end
+			end
+		end
+	end
+end
+
 return {
 	DrawCircle = DrawCircle,
 	DrawRectangle = DrawRectangle,
 	DrawLine = DrawLine,
 	DrawPolygon = DrawPolygon,
 	DrawCuboid = DrawCuboid,
+	DrawSphere = DrawSphere,
+	DrawEllipsoid = DrawEllipsoid,
 }

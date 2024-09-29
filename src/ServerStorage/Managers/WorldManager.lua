@@ -3,7 +3,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Block = require(ServerStorage.Classes.Block)
-local Signal = require(ReplicatedStorage.Classes.Signal)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 local Chunk = require(ServerStorage.Classes.Chunk)
 --local TileEntitiesManager = require(ServerStorage.Managers.TileEntitiesManager)
 local DataProviderManager = require(ServerStorage.Managers.DatabaseManager)
@@ -28,10 +28,10 @@ local WorldManager = {
 
 	-- [SIGNALS] --
 	--
-	BlockAdded = Signal.new() :: Signal.Signal<Block>,
-	BlockRemoved = Signal.new() :: Signal.Signal<Block>,
-	ChunksGenerated = Signal.new() :: Signal.Signal<boolean>,
-	Decompressed = Signal.new() :: Signal.Signal<boolean>,
+	BlockAdded = Signal.new(),
+	BlockRemoved = Signal.new(),
+	ChunksGenerated = Signal.new(),
+	Decompressed = Signal.new(),
 }
 
 WorldManager.ChunksGenerated:Connect(function()
@@ -42,7 +42,7 @@ export type Block = Block.IBlock
 
 -- [SIGNALS METHODS] --
 --
-function WorldManager:BlockAddedByIdSignal(id: number): Signal.Signal<Block>
+function WorldManager:BlockAddedByIdSignal(id: number)
 	local signal = Signal.new()
 
 	self.BlockAdded:Connect(function(block)
@@ -54,7 +54,7 @@ function WorldManager:BlockAddedByIdSignal(id: number): Signal.Signal<Block>
 	return signal
 end
 
-function WorldManager:BlockAddedInPosition(x: number, y: number, z: number): Signal.Signal<Block>
+function WorldManager:BlockAddedInPosition(x: number, y: number, z: number)
 	local signal = Signal.new()
 
 	self.BlockAdded:Connect(function(block)
@@ -69,7 +69,7 @@ end
 
 -- [CHUNKS UTILS] --
 --
-function WorldManager:GetChunks()
+function WorldManager:GetChunks(): { [string]: Chunk.Chunk }
 	return self.Container.Chunks
 end
 
@@ -172,7 +172,8 @@ function WorldManager:Delete(x: number, y: number, z: number)
 end
 
 function WorldManager:GetNeighbor(x: number, y: number, z: number, direction: Vector3 | Enum.NormalId)
-	direction = typeof(direction) == "Vector3" and direction or Vector3.FromNormalId(direction)
+	local direction: Vector3 = typeof(direction) == "Vector3" and direction
+		or Vector3.FromNormalId(direction :: Enum.NormalId)
 
 	return self:GetBlock(x + direction.X, y + direction.Y, z + direction.Z)
 end
@@ -193,17 +194,17 @@ end
 
 -- [DATA DECOMPRESSION/COMPRESSION] --
 --
-function WorldManager:DecompressChunks(compressedChunks: { [string]: { buffer } })
-	local chunks = self.Container.Chunks
+function WorldManager:DecompressChunks(compressedChunks: { [string]: { [string]: buffer } })
+	local chunks: { [string]: { [string]: buffer } } = self.Container.Chunks
 
-	for cx, rows in compressedChunks do
-		for cy, chunk in rows do
+	for cx: string, rows in compressedChunks do
+		for cy: string, chunk in rows do
 			--print(chunk)
 			task.wait(ExecutionTimer:GetDeltaTime() * 10)
 
 			chunks[cx] = chunks[cx] or {}
 
-			chunk = Chunk.new(tonumber(cx), tonumber(cy), chunk)
+			chunk = Chunk.new(tonumber(cx) :: number, tonumber(cy) :: number, chunk)
 
 			chunks[cx][cy] = chunk
 		end
@@ -247,18 +248,23 @@ function WorldManager:Init(island: DataProviderManager.Island)
 	--task.wait(ExecutionTimer:GetDeltaTime() * 1000)
 	print("decompressed !")
 
-	self.Decompressed:Fire(true)
+	WorldManager.Decompressed:Connect(function(...: boolean)
+		print("decrompréssée !")
+	end)
+
+	WorldManager.Decompressed:Fire(true)
 end
 
 function WorldManager:GetIslandData(): DataProviderManager.Island
 	return {
 		Chunks = self:GetCompressedChunks(),
 		--ExtraContent = self.Container.ExtraContent, -- TODO: create management for this
+		ExtraContent = {},
 	}
 end
 
 function WorldManager:Save()
-	if self:IsPlayerIsland() then
+	if self:IsPlayerIsland() and self.IsGenerated then
 		local data = self:GetIslandData()
 
 		local bufSizes = 0
@@ -302,12 +308,10 @@ end
 do -- [just bc i want netsing the code nvm] --
 	-- Auto Save
 	coroutine.wrap(function()
-		if WorldManager:IsPlayerIsland() then
-			while true do
-				task.wait(5 * 60)
+		while true do
+			task.wait(5 * 60)
 
-				WorldManager:Save()
-			end
+			WorldManager:Save()
 		end
 	end)()
 
