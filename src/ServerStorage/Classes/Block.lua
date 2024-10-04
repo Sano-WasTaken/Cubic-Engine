@@ -1,31 +1,18 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 
-local BufferManager = require(ReplicatedStorage.Classes.BufferManager)
+local Facing = require(ServerStorage.Components.Facing)
+local TileEntity = require(script.Parent.TileEntity)
 local ItemEnum = require(ReplicatedStorage.Enums.ItemEnum)
 local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
-
--- buffered
-
--- tabled
---[[
-{
-	[1] = 0, -- id
-	[2] = x, -- x position
-	[3] = y, -- y position
-	[4] = z, -- z position
-	[5] = x, -- x orientation
-	[6] = y, -- y orientation
-	[7] = z, -- z orientation
-}
-]]
 
 local Block = {}
 
 export type IBlock = typeof(Block)
 
-local function new(id: number): IBlock
+local function new(id: number, entity: {}?): IBlock
 	local self = setmetatable({
-		--buffer = defaultBuffer:CloneObject(buf),
+		entity = entity,
 		ID = id,
 	}, {
 		__index = Block,
@@ -35,15 +22,10 @@ local function new(id: number): IBlock
 end
 
 function Block:_setId(id: number)
-	--self.buffer:WriteData("ID", id)
-
 	self.ID = id
 end
 
-function Block:SetPosition(x: number, y: number, z: number)
-	--local buffer: BufferManager.buffering = self.buffer
-
-	--buffer:WriteData("X", x):WriteData("Y", y):WriteData("Z", z)
+function Block:SetPosition(x: number, y: number, z: number): IBlock
 	self.X = x
 	self.Y = y
 	self.Z = z
@@ -52,27 +34,46 @@ function Block:SetPosition(x: number, y: number, z: number)
 end
 
 function Block:GetPosition(): (number, number, number)
-	return self.X, self.Y, self.Z
+	return self.X or 0, self.Y or 0, self.Z or 0
 end
 
-function Block:SetOrientation(rx: number, ry: number, rz: number)
-	--self.X = rx
-	error("cannot touch it")
-
-	--return self
+function Block:GetEntity(): TileEntity.TileEntity?
+	return self.entity
 end
 
-function Block:GetOrientation() --: (number, number, number)
-	error("cannot touch it")
-	--local buffer: BufferManager.buffering = self.buffer
+function Block:SetFacing(facing: Facing.Facing): IBlock
+	local entity: TileEntity.TileEntity = self:GetEntity()
 
-	--return buffer:ReadData("RX"), buffer:ReadData("RY"), buffer:ReadData("RZ")
+	if entity then
+		local facingComp: Facing.FacingComponent? = entity:GetComponent("Facing") :: any
+
+		if facingComp then
+			facingComp:SetFacing(facing)
+		else
+			warn("no facing !")
+		end
+	else
+		warn("no entity !")
+	end
+
+	return self
+end
+
+function Block:GetFacing(): Facing.Facing
+	local entity: TileEntity.TileEntity = self:GetEntity()
+
+	if entity then
+		local facing: Facing.FacingComponent? = entity:GetComponent("Facing") :: any
+
+		if facing then
+			return facing:GetFacing()
+		end
+	end
+
+	return "NORTH"
 end
 
 function Block:GetID(): number
-	--local buffer: BufferManager.buffering = self.buffer
-
-	--return buffer:ReadData("ID")
 	return self.ID
 end
 
@@ -81,11 +82,6 @@ function Block:GetLoot(): number?
 	local itemId = ItemEnum[BlockEnum[self:GetID()]]
 
 	return itemId
-end
-
-function Block:GetBuffer() --: (BufferManager.buffering, buffer)
-	error("cannot touch it")
-	--return self.buffer, self.buffer:GetBuffer()
 end
 
 return {

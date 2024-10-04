@@ -1,9 +1,9 @@
-local DataModelPatchService = game:GetService("DataModelPatchService")
 local Component = require(script.Parent.Component)
 
 type ComponentF = {
 	Name: string,
 	Component: Component.Component,
+	Args: { any },
 }
 
 local TileEntity = {
@@ -21,14 +21,15 @@ function TileEntity:extends(class: {})
 	return setmetatable(class, { __index = self })
 end
 
-function TileEntity:setComponent(name: string, component: Component.Component)
+function TileEntity:setComponent(name: string, component: any, ...: any)
 	table.insert(self.Components, {
 		Name = name,
 		Component = component,
+		Args = { ... },
 	})
 end
 
-function TileEntity:GetComponent(name: string): Component.Component -- i'm feeling seriously tired doing this.
+function TileEntity:GetComponent(name: string): Component.Component? -- i'm feeling seriously tired doing this.
 	local fComp
 
 	for index, comp: ComponentF in self.Components do
@@ -51,14 +52,14 @@ local function createComps(self: TileEntity): { Component.Component }
 	local components = {}
 
 	for index, comp in self.Components do
-		components[index] = comp.Component:create()
+		components[index] = comp.Component:new(unpack(comp.Args))
 	end
 
 	return components
 end
 
 function TileEntity:create(data: { any }?)
-	assert(self.ClassName == "TileEntity", "cannot create TileEntity.")
+	assert(self.ClassName ~= "TileEntity", "cannot create TileEntity.")
 
 	return setmetatable({
 		Container = data or { -- Single value or array !
@@ -67,6 +68,10 @@ function TileEntity:create(data: { any }?)
 			Components = createComps(self), -- ARRRRRRRRRAAAAAYYYYY !!!!!!
 		},
 	}, { __index = self })
+end
+
+function TileEntity:GetContainerData(): {}
+	return self.Container
 end
 
 function TileEntity:SetPosition(x: number, y: number, z: number)

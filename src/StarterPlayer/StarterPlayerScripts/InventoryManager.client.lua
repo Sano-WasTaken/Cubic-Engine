@@ -27,9 +27,13 @@ Inventory:Init({})
 Hotbar:Visible()
 
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
+	if gameProcessed then
+		return
+	end
+
 	local slot = keybinds[input.KeyCode]
 
-	if slot and not gameProcessed then
+	if slot then
 		slot = (slot == Hotbar:GetSelectedSlot()) and 0 or slot
 		Hotbar:SetSelectedSlot(slot)
 	end

@@ -111,6 +111,30 @@ local function appendBlock(block: WorldManager.Block)
 		return
 	end
 
+	local neighbors = WorldManager:GetNeighbors(x, y, z)
+
+	-- Block cull
+	if neighbors.Size == 6 then
+		--destroyNeighborsBlocks(x, y, z)
+		for _, normalId: Enum.NormalId in Enum.NormalId:GetEnumItems() do
+			local direction = Vector3.FromNormalId(normalId)
+
+			local neighbor = neighbors[direction]
+
+			if neighbor then
+				local nx, ny, nz = neighbor:GetPosition()
+
+				local nn = WorldManager:GetNeighbors(nx, ny, nz).Size
+
+				if nn == 6 then
+					destroyBlock(nx, ny, nz)
+				end
+			end
+		end
+
+		return
+	end
+
 	local part = createBlock(id)
 
 	part.CFrame = cfnew(Vector3.new(x, y, z) * 3) -- * cfanew(rx, ry, rz)
@@ -118,11 +142,41 @@ local function appendBlock(block: WorldManager.Block)
 
 	setBlock(x, y, z, part)
 
-	--[[for _, value in Enum.NormalId:GetEnumItems() do
-		createTexture(id, value).Parent = part
-	end]]
+	for _, normalId: Enum.NormalId in Enum.NormalId:GetEnumItems() do
+		local direction = Vector3.FromNormalId(normalId)
 
-	for _, normalId in Enum.NormalId:GetEnumItems() do
+		local neighbor = neighbors[direction]
+
+		if neighbor then
+			local nx, ny, nz = neighbor:GetPosition()
+
+			local nn = WorldManager:GetNeighbors(nx, ny, nz).Size
+
+			local npart = findBlock(nx, ny, nz)
+
+			if npart then
+				if nn ~= 6 then
+					local texture = npart:FindFirstChild(faces[-direction].Name)
+
+					if texture then
+						texture:Destroy()
+					end
+				else
+					destroyBlock(nx, ny, nz)
+				end
+			end
+		end
+
+		if neighbor == nil then
+			local texture = createTexture(id, normalId)
+
+			if texture then
+				texture.Parent = part
+			end
+		end
+	end
+
+	--[[for _, normalId in Enum.NormalId:GetEnumItems() do
 		local direction = Vector3.FromNormalId(normalId)
 
 		local neighbor = WorldManager:GetNeighbor(x, y, z, direction)
@@ -148,7 +202,7 @@ local function appendBlock(block: WorldManager.Block)
 				texture.Parent = part
 			end
 		end
-	end
+	end]]
 end
 
 local function deleteBlock(block: WorldManager.Block)
@@ -166,12 +220,20 @@ local function deleteBlock(block: WorldManager.Block)
 			local id = neighbor:GetID()
 			local oppositeFace = faces[-direction]
 
-			local npart = findBlock(nx, ny, nz)
+			local npart = findBlock(nx, ny, nz) or createBlock(neighbor:GetID())
 
-			local texture = npart:FindFirstChild(oppositeFace.Name) or createTexture(id, oppositeFace)
+			if npart.Parent == nil then
+				npart.CFrame = cfnew(Vector3.new(nx, ny, nz) * 3) -- * cfanew(rx, ry, rz)
+				npart.Parent = renderFolder
+				setBlock(nx, ny, nz, npart)
+			end
 
-			if texture then
-				texture.Parent = npart
+			if npart then
+				local texture = npart:FindFirstChild(oppositeFace.Name) or createTexture(id, oppositeFace)
+
+				if texture then
+					texture.Parent = npart
+				end
 			end
 		end
 	end
@@ -181,4 +243,7 @@ return {
 	appendBlock = appendBlock,
 	deleteBlock = deleteBlock,
 	findBlock = findBlock,
+	setBlock = setBlock,
+	createBlock = createBlock,
+	createTexture = createTexture,
 }

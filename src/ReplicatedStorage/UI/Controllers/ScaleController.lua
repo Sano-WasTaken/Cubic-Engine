@@ -6,8 +6,6 @@ local camera = workspace.CurrentCamera
 
 local DEFAULT_SIZE = Vector2.new(1920, 1080)
 
---local scope = Fusion.scoped(Fusion)
-
 local UIs = {}
 
 RunService.RenderStepped:Connect(function(_: number)

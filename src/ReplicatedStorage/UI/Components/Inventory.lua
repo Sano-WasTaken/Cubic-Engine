@@ -95,7 +95,7 @@ function Inventory:Init(inventory: {})
 
 	Inventory.Inventory = inventory
 
-	local scale = ScaleController(scope, 2.5)
+	local scale = ScaleController(scope, 3)
 
 	Inventory.UI = scope:New("ScreenGui")({
 		ResetOnSpawn = false,

@@ -69,7 +69,7 @@ end
 
 -- [CHUNKS UTILS] --
 --
-function WorldManager:GetChunks(): { [string]: Chunk.Chunk }
+function WorldManager:GetChunks(): { [string]: { [string]: Chunk.Chunk } }
 	return self.Container.Chunks
 end
 
@@ -87,8 +87,8 @@ function WorldManager:GetChunk(cx: number, cy: number): Chunk.Chunk?
 
 	-- [[ you can add other schematics for chunks like custom chunks data organizing. ]] --
 
-	if typeof(chunk) == "buffer" then
-		chunk = Chunk.new(cx, cy, chunk)
+	if typeof(chunk.chunk) == "buffer" then
+		chunk = Chunk.new(cx, cy, chunk.buffer, chunk.entity)
 
 		chunks[tostring(cx)][tostring(cy)] = chunk
 	end
@@ -111,7 +111,7 @@ function WorldManager:SwapId(block: Block, id: number)
 	self.BlockAdded:Fire(block)
 end
 
-function WorldManager:GetBlock(x: number, y: number, z: number)
+function WorldManager:GetBlock(x: number, y: number, z: number): Block.IBlock?
 	local cx, cy = Chunk.getChunkPositionFromBlock(x, z)
 
 	local chunk = self:GetChunk(cx, cy)
@@ -171,40 +171,61 @@ function WorldManager:Delete(x: number, y: number, z: number)
 	self.BlockRemoved:Fire(block)
 end
 
-function WorldManager:GetNeighbor(x: number, y: number, z: number, direction: Vector3 | Enum.NormalId)
-	local direction: Vector3 = typeof(direction) == "Vector3" and direction
-		or Vector3.FromNormalId(direction :: Enum.NormalId)
+function WorldManager:GetNeighbor(x: number, y: number, z: number, direction: Vector3 | Enum.NormalId): Block.IBlock
+	local newDirection: Vector3 = (
+		typeof(direction) == "Vector3" and direction or Vector3.FromNormalId(direction :: Enum.NormalId)
+	)
 
-	return self:GetBlock(x + direction.X, y + direction.Y, z + direction.Z)
+	return self:GetBlock(x + newDirection.X, y + newDirection.Y, z + newDirection.Z)
 end
 
-function WorldManager:GetNeighbors(x: number, y: number, z: number)
+function WorldManager:GetNeighbors(x: number, y: number, z: number): { [Vector3]: Block.IBlock, Size: number }
 	local neighbors = {}
 
-	for _, normalId in Enum.NormalId:GetEnumItems() do
+	local sum = 0
+
+	for _, normalId: Enum.NormalId in Enum.NormalId:GetEnumItems() do
 		local direction = Vector3.FromNormalId(normalId)
 
 		local neighbor = self:GetNeighbor(x, y, z, direction)
 
-		neighbors[direction] = neighbor
+		if neighbor then
+			neighbors[direction] = neighbor
+			sum += 1
+		end
 	end
+
+	neighbors.Size = sum
 
 	return neighbors
 end
 
+function WorldManager:GetAmountOfBlocks(): number
+	local sum = 0
+
+	local chunks = WorldManager:GetChunks()
+
+	for _, row in chunks do
+		for _, c in row do
+			sum += c:GetAmountOfBlock()
+		end
+	end
+
+	return sum
+end
+
 -- [DATA DECOMPRESSION/COMPRESSION] --
 --
-function WorldManager:DecompressChunks(compressedChunks: { [string]: { [string]: buffer } })
+function WorldManager:DecompressChunks(compressedChunks: { [string]: { [string]: { chunk: buffer, entity: {} } } })
 	local chunks: { [string]: { [string]: buffer } } = self.Container.Chunks
 
 	for cx: string, rows in compressedChunks do
 		for cy: string, chunk in rows do
-			--print(chunk)
-			task.wait(ExecutionTimer:GetDeltaTime() * 10)
+			--task.wait(ExecutionTimer:GetDeltaTime() * 10)
 
 			chunks[cx] = chunks[cx] or {}
 
-			chunk = Chunk.new(tonumber(cx) :: number, tonumber(cy) :: number, chunk)
+			chunk = Chunk.new(tonumber(cx) :: number, tonumber(cy) :: number, chunk.chunk, chunk.entity)
 
 			chunks[cx][cy] = chunk
 		end
@@ -212,16 +233,17 @@ function WorldManager:DecompressChunks(compressedChunks: { [string]: { [string]:
 end
 
 function WorldManager:GetCompressedChunks()
-	local compressedChunk: { { buffer } } = {}
+	local compressedChunk: { { { chunk: buffer, entity: {} } } } = {}
 
 	for cx, rows in self:GetChunks() do
 		for cy, chunk in rows do
-			--print(chunk)
-			task.wait(ExecutionTimer:GetDeltaTime() * 10)
+			--task.wait(ExecutionTimer:GetDeltaTime() * 10)
 
 			compressedChunk[cx] = compressedChunk[cx] or {}
 
-			compressedChunk[cx][cy] = chunk:Compress()
+			compressedChunk[cx][cy] = { chunk = chunk:Compress(), entity = chunk.entity }
+
+			--print(compressedChunk[cx][cy])
 		end
 	end
 
@@ -248,8 +270,8 @@ function WorldManager:Init(island: DataProviderManager.Island)
 	--task.wait(ExecutionTimer:GetDeltaTime() * 1000)
 	print("decompressed !")
 
-	WorldManager.Decompressed:Connect(function(...: boolean)
-		print("decrompréssée !")
+	WorldManager.Decompressed:Connect(function()
+		warn("Total blocks saved:", WorldManager:GetAmountOfBlocks())
 	end)
 
 	WorldManager.Decompressed:Fire(true)
@@ -257,9 +279,7 @@ end
 
 function WorldManager:GetIslandData(): DataProviderManager.Island
 	return {
-		Chunks = self:GetCompressedChunks(),
-		--ExtraContent = self.Container.ExtraContent, -- TODO: create management for this
-		ExtraContent = {},
+		Chunks = self:GetCompressedChunks() :: {},
 	}
 end
 
@@ -270,13 +290,14 @@ function WorldManager:Save()
 		local bufSizes = 0
 
 		for _, rows in data.Chunks do
-			for _, buf in rows do
-				bufSizes += buffer.len(buf)
+			for _, c in rows do
+				bufSizes += buffer.len(c.chunk)
 			end
 		end
 
-		warn("total bytes saved:", HttpService:JSONEncode(data):len() .. " bytes encoded [base64 JSONEncode]")
-		warn("total bytes saved:", bufSizes .. " bytes non encoded [base64 JSONEncode]")
+		warn("Total bytes saved:", HttpService:JSONEncode(data):len() .. " bytes encoded [base64 JSONEncode]")
+		warn("Total bytes saved:", bufSizes .. " bytes non encoded [base64 JSONEncode]")
+		warn("Total blocks saved:", WorldManager:GetAmountOfBlocks())
 		DataProviderManager:SaveIslandData(self:GetOwner().UserId, data)
 	end
 end

@@ -17,4 +17,5 @@ return Enumerator.new({
 	"Iron_Block",
 	"Coal_Block",
 	"Oak_Log",
+	"Chest",
 })

@@ -1,7 +1,12 @@
 local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 --local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Waiter = require(ReplicatedStorage.Classes.Waiter)
+local TileEntitiesManager = require(ServerStorage.Managers.TileEntitiesManager)
 local Block = require(script.Parent.Block)
+local TileEntity = require(script.Parent.TileEntity)
 --local ExecutionTimer = require(ReplicatedStorage.Utils.ExecutionTimer)
 
 local Chunk = {}
@@ -68,9 +73,10 @@ local function getCoordinatesFromPointer(pointer: number)
 	return x, y, z
 end
 
-local function new(x: number, y: number, buf: buffer?)
+local function new(x: number, y: number, buf: buffer?, entities: {}?)
 	local self = setmetatable({
 		buffer = buffer.create(CHUNK_SIZE.X * CHUNK_SIZE.Y * CHUNK_SIZE.Z * 2),
+		entity = entities or {},
 		--encoded = buf,
 		x = x,
 		y = y,
@@ -87,25 +93,89 @@ local function new(x: number, y: number, buf: buffer?)
 end
 
 function Chunk:_setBlockInPosition(pointer: number, id: number)
-	local blockBuf = buffer.create(2)
-	bufwriteu16(blockBuf, 0, id)
-
-	bufcopy(self.buffer, pointer * 2, blockBuf, 0, 2)
+	bufwriteu16(self.buffer, pointer * 2, id)
 end
 
 function Chunk:_deleteBlockInPosition(x: number, y: number, z: number)
 	local pointer = getPointerToCoordinates(x, y, z)
 
-	buffer.fill(self.buffer, pointer * 2, 0, 2)
+	bufwriteu16(self.buffer, pointer * 2, 0)
 end
 
 function Chunk:_getBlockInPosition(x: number, y: number, z: number): Block.IBlock?
 	local pointer = getPointerToCoordinates(x, y, z)
 
 	--print(buffer.len(self.buffer), pointer * 2, x, y, z)
-	local id = buffer.readu16(self.buffer, pointer * 2)
+	local id = bufreadu16(self.buffer, pointer * 2)
 
-	return Block.new(id):SetPosition(x + (CHUNK_SIZE.X * self.x), y, z + (CHUNK_SIZE.Z * self.y))
+	--x, z = x + (CHUNK_SIZE.X * self.x), z + (CHUNK_SIZE.Z * self.y)
+
+	return Block.new(id, self:_getEntityFromPosition(x, y, z))
+		:SetPosition(x + (CHUNK_SIZE.X * self.x), y, z + (CHUNK_SIZE.Z * self.y))
+end
+
+function Chunk:_getBlockIdAtPointer(pointer: number): number
+	return bufreadu16(self.buffer, pointer * 2)
+end
+
+function Chunk:_setEntity(entity: TileEntity.TileEntity)
+	local x, y, z = entity:GetPosition()
+
+	if self:_getEntityFromPosition(x, y, z) == nil then
+		table.insert(self.entity, entity:GetContainerData())
+	end
+end
+
+function Chunk:_getEntityFromPosition(x: number, y: number, z: number): TileEntity.TileEntity?
+	local pointer = getPointerToCoordinates(x, y, z)
+
+	local id = self:_getBlockIdAtPointer(pointer)
+
+	if TileEntitiesManager.Provider:GetData(id) == nil then
+		return
+	end
+
+	local fentity
+
+	x, z = x + (CHUNK_SIZE.X * self.x), z + (CHUNK_SIZE.Z * self.y)
+
+	for _, _entity: { ID: number } in self.entity do
+		local entity = TileEntitiesManager.Provider:GetData(_entity.ID):create(_entity)
+
+		local fx, fy, fz = entity:GetPosition()
+
+		if fx == x and fy == y and fz == z then
+			fentity = entity
+
+			break
+		end
+	end
+
+	return fentity
+end
+
+function Chunk:_removeEntityFromPosition(x: number, y: number, z: number)
+	local pointer = getPointerToCoordinates(x, y, z)
+
+	local id = self:_getBlockIdAtPointer(pointer)
+
+	if TileEntitiesManager.Provider:GetData(id) == nil then
+		return
+	end
+
+	x, z = x + (CHUNK_SIZE.X * self.x), z + (CHUNK_SIZE.Z * self.y)
+
+	for i, _entity: { ID: number } in self.entity do
+		local entity = TileEntitiesManager.Provider:GetData(_entity.ID):create(_entity)
+
+		local fx, fy, fz = entity:GetPosition()
+
+		if fx == x and fy == y and fz == z then
+			table.remove(self.entity, i)
+
+			break
+		end
+	end
 end
 
 function Chunk:GetAmountOfBlock(): number
@@ -123,6 +193,8 @@ function Chunk:GetBlockAtPosition(x: number, y: number, z: number): Block.IBlock
 	local block = self:_getBlockInPosition(x, y, z)
 
 	if block:GetID() == 0 then
+		block.entity = self:_getEntityFromPosition(x, y, z)
+
 		return
 	end
 
@@ -136,6 +208,8 @@ function Chunk:Compress()
 
 	local pointer, localId, occurences = 0, -1, 0
 
+	local waiter = Waiter.new()
+
 	while pointer < totalSize do
 		local id = bufreadu16(self.buffer, pointer * 2) -- block and block:GetID() or 0 -- unusable [si quelqu'un passe par la kill me pls]
 
@@ -144,6 +218,7 @@ function Chunk:Compress()
 		else
 			if localId ~= -1 then
 				chunkBuffer = writeOccurences(chunkBuffer, localId, occurences)
+				waiter:Update()
 			end
 			localId = id
 			occurences = 1
@@ -163,18 +238,19 @@ function Chunk:_decompress(buffurizedChunk: buffer)
 	local localPointer, occurences = 0, 0
 	local id, occ, len = 0, 0, 0
 
+	local waiter = Waiter.new()
+
 	while totalSize > occurences do
 		id, occ, len = getOccurences(buffurizedChunk, localPointer)
 
 		if id ~= 0 then
+			waiter:Start()
 			for j = occurences, occurences + occ - 1 do
-				--self:_setBlockInPosition(j, id) -- reducing __index metamethod
-
-				--local blockBuf = buffer.create(2)
 				buffer.writeu16(self.buffer, j * 2, id)
-
-				--buffer.copy(self.buffer, j * 2, blockBuf, 0, 2) -- bro wtf?
 			end
+
+			waiter:Update()
+			self.amount += occ
 		end
 
 		occurences += occ
@@ -191,38 +267,30 @@ function Chunk:InsertBlock(block: Block.IBlock, x: number, y: number, z: number)
 		return false
 	end
 
+	local id = block:GetID()
+
 	local pointer = getPointerToCoordinates(x, y, z)
 
-	self:_setBlockInPosition(pointer, block:GetID())
+	local tileClass = TileEntitiesManager.Provider:GetData(id)
+
+	-- tileEntity creation and initialisation
+	if tileClass then
+		local tile = tileClass:create()
+
+		x, z = x + (CHUNK_SIZE.X * self.x), z + (CHUNK_SIZE.Z * self.y)
+
+		tile:SetPosition(x, y, z)
+
+		self:_setEntity(tile)
+
+		print(self.entity)
+	end
+
+	self:_setBlockInPosition(pointer, id)
 
 	self.amount += 1
 
 	return true
-end
-
---[[
-x, y, z aren't the block position in the world -> position in chunk !
-]]
-function Chunk:Iterate(callback: (block: Block.IBlock) -> ())
-	local totalSize = CHUNK_SIZE.X * CHUNK_SIZE.Y * CHUNK_SIZE.Z
-
-	local id, pointer, block = 0, 0, nil
-
-	local x, y, z = 0, 0, 0
-
-	while pointer < totalSize do
-		id = bufreadu16(self.buffer, pointer * 2) -- block and block:GetID() or 0 -- unusable [si quelqu'un passe par la kill me pls]
-
-		if id ~= 0 then
-			x, y, z = getCoordinatesFromPointer(pointer)
-
-			block = Block.new(id):SetPosition(x + (CHUNK_SIZE.X * self.x), y, z + (CHUNK_SIZE.Z * self.y))
-
-			callback(block)
-		end
-
-		pointer += 1
-	end
 end
 
 function Chunk:DeleteBlock(x: number, y: number, z: number)
@@ -230,6 +298,9 @@ function Chunk:DeleteBlock(x: number, y: number, z: number)
 		return
 	end
 
+	self.amount -= 1
+
+	self:_removeEntityFromPosition(x, y, z)
 	self:_deleteBlockInPosition(x, y, z)
 end
 
@@ -249,6 +320,7 @@ return {
 	getChunkPositionFromBlock = getChunkPositionFromBlock,
 	getBlockPositionInChunk = getBlockPositionInChunk,
 	getMaxCoordinate = getMaxCoordinate,
+	getCoordinatesFromPointer = getCoordinatesFromPointer,
 	CHUNK_SIZE = CHUNK_SIZE,
 	ChunkBlockSize = CHUNK_SIZE.X * CHUNK_SIZE.Z * CHUNK_SIZE.Y,
 }

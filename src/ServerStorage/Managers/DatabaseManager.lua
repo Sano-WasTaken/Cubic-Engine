@@ -3,7 +3,7 @@ local ServerStorage = game:GetService("ServerStorage")
 --local MemoryStoreService = game:GetService("MemoryStoreService")
 
 --local Players = game:GetService("Players")
-local DATABASE_NAME = "Player_Database"
+local DATABASE_NAME = "Player_Database_PlayTester"
 
 local function waitForBudget(requestType: Enum.DataStoreRequestType)
 	repeat
@@ -18,7 +18,7 @@ List of scopes !
 
 ]]
 
-export type Island = { Chunks: {}, ExtraContent: {} }
+export type Island = { Chunks: {} }
 export type PlayerData = {
 	Inventory: {}, --: { [string]: Item.IItem },
 	Coins: number,

@@ -4,7 +4,6 @@ local ServerStorage = game:GetService("ServerStorage")
 local TileEntity = require(ServerStorage.Classes.TileEntity)
 local DataProvider = require(ReplicatedStorage.Classes.DataProvider)
 local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
-local Block = require(ServerStorage.Classes.Block)
 
 type TileEntity = TileEntity.TileEntity
 
@@ -13,8 +12,7 @@ type ExecutionService = {
 	Init: (tileEntity: TileEntity) -> nil,
 } | (tileEntity: TileEntity) -> nil
 
-local Provider: DataProvider.DataProvider<{ Class: TileEntity, new: ({ any }) -> TileEntity }> =
-	DataProvider.new(BlockEnum)
+local Provider: DataProvider.DataProvider<TileEntity> = DataProvider.new(BlockEnum)
 
 local Manager = {
 	ExecutionServices = {
@@ -86,10 +84,10 @@ end
 function Manager:init()
 	for _, module in ServerStorage.Contents.TileEntities:GetChildren() do
 		if module:IsA("ModuleScript") then
-			local ok, result: { Class: TileEntity, new: (any) -> TileEntity } = pcall(require, module)
+			local ok, result: TileEntity = pcall(require, module)
 
 			if ok then
-				Provider:InsertData(result.Class:GetID(), result)
+				Provider:InsertData(result:GetID(), result)
 			else
 				warn(result)
 			end
@@ -113,18 +111,14 @@ function Manager:Delete(tileEntity: TileEntity)
 	self:_remove(tileEntity, context)
 end
 
-function Manager:GetTileEntityFromBlock(block: Block.IBlock, content: {}): TileEntity?
-	local id = block:GetID()
-
+function Manager:GetTileEntityFromId(id: number): TileEntity?
 	local TileEntityClass = Provider:GetData(id)
 
 	if TileEntityClass then
-		--local x, y, z = block:GetPosition()
-
-		--content.Position = { x, y, z }
-
-		return TileEntityClass.new(content) :: TileEntity
+		return TileEntityClass.Class:create()
 	end
+
+	return nil
 end
 
 Manager:init()
