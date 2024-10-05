@@ -12,9 +12,6 @@ local LoadingScreenNetwork = require(ReplicatedStorage.Networks.LoadingScreenNet
 local CustomStats = require(ReplicatedStorage.Utils.CustomStats)
 --local ExecutionTimer = require(ReplicatedStorage.Utils.ExecutionTimer)
 
-local IncrementLS = LoadingScreenNetwork.IncrementLoadingBar:Server()
-local LoadingS = LoadingScreenNetwork.LoadingSucceed:Server()
-
 WorldManager.BlockAdded:Connect(function(block)
 	BlockRenderManager.appendBlock(block)
 	CustomStats:IncrementStat("BlockCreated", 1)
@@ -110,10 +107,13 @@ for x: string, rows in chunks do
 		loadedChunks += 1
 
 		task.wait()
-		IncrementLS:FireAll(loadedChunks, amountOfChunks)
+		LoadingScreenNetwork.IncrementLoadingBar.sendToAll({
+			index = loadedChunks,
+			max = amountOfChunks,
+		})
 	end
 end
 print("Blocks loaded in:", os.clock() - start, "for", #workspace:FindFirstChild("RenderFolder"):GetChildren(), "blocks")
 warn("Total of blocks:", WorldManager:GetAmountOfBlocks())
 WorldManager.ChunksGenerated:Fire(true)
-LoadingS:FireAll()
+LoadingScreenNetwork.LoadingSuccess.sendToAll()

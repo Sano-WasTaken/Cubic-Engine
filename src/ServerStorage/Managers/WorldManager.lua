@@ -27,10 +27,10 @@ local WorldManager = {
 
 	-- [SIGNALS] --
 	--
-	BlockAdded = Signal.new(),
-	BlockRemoved = Signal.new(),
-	ChunksGenerated = Signal.new(),
-	Decompressed = Signal.new(),
+	BlockAdded = Signal.new() :: Signal.Signal<Block.IBlock>,
+	BlockRemoved = Signal.new() :: Signal.Signal<Block.IBlock>,
+	ChunksGenerated = Signal.new() :: Signal.Signal<boolean>,
+	Decompressed = Signal.new() :: Signal.Signal<boolean>,
 }
 
 WorldManager.ChunksGenerated:Connect(function()
