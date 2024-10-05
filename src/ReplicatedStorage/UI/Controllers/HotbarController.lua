@@ -45,8 +45,6 @@ function Controller.createSlots(self: Scope)
 			LayoutOrder = i,
 			Childrens = {
 				self:Computed(function(use)
-					--print(use(slotValue))
-
 					item = use(slotValue)
 
 					local isSameID: boolean = item and currentId == item.ID
@@ -56,7 +54,9 @@ function Controller.createSlots(self: Scope)
 
 						local part, camera = GetMesh(item.ID)
 
-						print("recreate")
+						if viewport then
+							viewport:Destroy()
+						end
 
 						viewport = self:New("ViewportFrame")({
 							Transparency = 1,

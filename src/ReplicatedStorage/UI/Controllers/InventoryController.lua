@@ -65,8 +65,6 @@ local function createSlot(self: Scope, slotValue, index: number)
 			self:Computed(function(use)
 				local item = use(slotValue)
 
-				print(item)
-
 				local isSameID: boolean = item and currentId == item.ID
 
 				if not isSameID and item then
@@ -74,7 +72,9 @@ local function createSlot(self: Scope, slotValue, index: number)
 
 					local part, camera = GetMesh(item.ID)
 
-					print("recreate")
+					if viewport then
+						viewport:Destroy()
+					end
 
 					viewport = self:New("ViewportFrame")({
 						Transparency = 1,
@@ -91,8 +91,6 @@ local function createSlot(self: Scope, slotValue, index: number)
 			self:Computed(function(use)
 				local item = use(slotValue)
 
-				print(item)
-
 				return item
 						and self:CreateText({
 							Text = tostring(item.Amount or 1),
@@ -107,50 +105,10 @@ local function createSlot(self: Scope, slotValue, index: number)
 			warn("click", index)
 		end,
 	})
-
-	--[[return scope:Computed(function(use, _)
-		use(slotValue)
-
-		local item = scope.Inventory[tostring(index)]
-
-		local part, camera
-
-		if item then
-			part, camera = GetMesh(item.ID)
-		end
-
-		return scope:CreateSlot({
-			Image = "rbxassetid://123167957040866",
-			LayoutOrder = index,
-			Childrens = {
-				scope:New("ViewportFrame")({
-					Transparency = 1,
-					Size = UDim2.fromOffset(30, 30),
-					AnchorPoint = Vector2.new(0.5, 0.5),
-					Position = UDim2.fromScale(0.5, 0.5),
-					CurrentCamera = camera,
-					[children] = {
-						part,
-					},
-				}),
-				item and scope:CreateText({
-					Text = tostring(item.Amount or 1),
-					AnchorPoint = Vector2.new(1, 1),
-					Position = UDim2.fromOffset(30, 30),
-					TextScale = 7.5 / 1.5,
-				}) or nil,
-			},
-			Activated = function()
-				warn("click", index)
-			end,
-		})
-	end)]]
 end
 
 function Controller.createInventorySlots(self: Scope)
 	local slots = {}
-
-	--local items = scope.peek(Inventory.Inventory)
 
 	for i = 1, 9 * 3 do
 		local item: { ID: number, Amount: number }? = self.Inventory[i]
@@ -167,8 +125,6 @@ end
 
 function Controller.createHotbarSlots(self: Scope)
 	local slots = {}
-
-	--local items = scope.peek(Inventory.Inventory)
 
 	for i = 9 * 3 + 1, 9 * 4 do
 		local item: { ID: number, Amount: number }? = self.Inventory[i]
@@ -242,7 +198,6 @@ function Controller.Init(self: Scope)
 							self:createHotbarSlots(),
 						},
 					}),
-					--Inventory:createSlots(),
 				},
 			}),
 		},
