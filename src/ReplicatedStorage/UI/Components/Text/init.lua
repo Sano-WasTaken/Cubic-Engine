@@ -71,7 +71,9 @@ local function createText(scope: Fusion.Scope<typeof(Fusion)>, props: props)
 				return charactersUI
 			end),
 			scope:New("UIScale")({
-				Scale = props.TextScale,
+				Scale = scope:Computed(function(use)
+					return use(props.TextScale) / CHARACTER_SIZE.Y.Offset
+				end),
 			}),
 		},
 	})
