@@ -1,7 +1,5 @@
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BaseController = require(script.Parent.BaseController)
-local ScaleController = require(script.Parent.ScaleController)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local children = Fusion.Children
 local IconButton = require(ReplicatedStorage.UI.Components.IconButton)
@@ -52,8 +50,6 @@ function Controller.Init(self: Scope)
 
 	local icons = self:CreateIcons()
 
-	local scale = ScaleController(self, 3)
-
 	self.Instance = self:New("ScreenGui")({
 		Name = "Icons",
 		ResetOnSpawn = false,
@@ -68,12 +64,7 @@ function Controller.Init(self: Scope)
 						Padding = UDim.new(0, 5),
 						FillDirection = Enum.FillDirection.Vertical,
 					}),
-					-- TODO: make a better ScaleController
-					-- DO
-					self:New("UIScale")({
-						Scale = scale,
-					}),
-					-- END
+					self:Scale(3),
 					icons,
 				},
 			}),

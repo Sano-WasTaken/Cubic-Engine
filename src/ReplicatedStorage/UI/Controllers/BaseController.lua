@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ScaleController = require(script.Parent.ScaleController)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 
 local BaseController = {
@@ -37,6 +38,8 @@ export type BaseScope = typeof(BaseController) & Fusion.Scope<typeof(Fusion)>
 
 return function(Controller)
 	setmetatable(Controller, { __index = BaseController })
+
+	Controller.Scale = ScaleController
 
 	local scope = Fusion.scoped(Fusion, Controller)
 
