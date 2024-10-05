@@ -1,6 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
-local Hotbar = require(ReplicatedStorage.UI.Components.Hotbar)
+local HotbarController = require(ReplicatedStorage.UI.Controllers.HotbarController)
 local InventoryController = require(ReplicatedStorage.UI.Controllers.InventoryController)
 
 --local scale = ScaleController(scope, 2.5)
@@ -21,10 +21,10 @@ local keybinds = {
 	[Enum.KeyCode.Nine] = 9,
 }
 
-Hotbar:Init({})
+HotbarController:Init({})
 InventoryController:Init({})
 
-Hotbar:Visible()
+HotbarController:Visible()
 
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
 	if gameProcessed then
@@ -34,16 +34,16 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 	local slot = keybinds[input.KeyCode]
 
 	if slot then
-		slot = (slot == Hotbar:GetSelectedSlot()) and 0 or slot
-		Hotbar:SetSelectedSlot(slot)
+		slot = (slot == HotbarController:GetSelectedSlot()) and 0 or slot
+		HotbarController:SetSelectedSlot(slot)
 	end
 
 	if input.KeyCode == Enum.KeyCode.E then
 		if toggled then
 			InventoryController:Visible()
-			Hotbar:Invisible()
+			HotbarController:Invisible()
 		else
-			Hotbar:Visible()
+			HotbarController:Visible()
 			InventoryController:Invisible()
 		end
 		toggled = not toggled
