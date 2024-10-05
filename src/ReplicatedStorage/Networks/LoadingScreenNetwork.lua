@@ -1,15 +1,17 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Bytenet = require(ReplicatedStorage.Packages.Bytenet)
 
-local Red = require(ReplicatedStorage.Packages.Red)
+return Bytenet.defineNamespace("Loading", function()
+	return {
+		IncrementLoadingBar = Bytenet.definePacket({
+			value = Bytenet.struct({
+				max = Bytenet.uint32,
+				index = Bytenet.uint32,
+			}),
+		}),
 
-return {
-	IncrementLoadingBar = Red.Event("IncrementLoadingBar", function(i: number, max: number)
-		assert(max >= i, "there is a problem lolll.")
-
-		return i, max
-	end),
-
-	LoadingSucceed = Red.Event("LoadingSucceed", function()
-		return
-	end),
-}
+		LoadingSuccess = Bytenet.definePacket({
+			value = Bytenet.nothing,
+		}),
+	}
+end)
