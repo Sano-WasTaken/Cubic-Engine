@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local BaseController = require(script.Parent.BaseController)
 local ScaleController = require(script.Parent.ScaleController)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local children = Fusion.Children
@@ -46,8 +47,6 @@ function Controller.AddButtonIcon(
 	return self
 end
 
--- TODO: make a Base Controller (inherit)
--- DO
 function Controller.Init(self: Scope)
 	assert(self.Instance == nil, "Do not init twice !")
 
@@ -82,30 +81,7 @@ function Controller.Init(self: Scope)
 	})
 end
 
-function Controller.Toggle(self: Scope)
-	local active = self.Instance.Parent ~= nil
-
-	if active then
-		self:Invisible()
-	else
-		self:Visible()
-	end
-end
-
-function Controller.Visible(self: Scope)
-	assert(self.Instance ~= nil, "Must be init !")
-
-	self.Instance.Parent = Players.LocalPlayer.PlayerGui
-end
-
-function Controller.Invisible(self: Scope)
-	assert(self.Instance ~= nil, "Must be init !")
-
-	self.Instance.Parent = nil
-end
--- END
-
-local scope = Fusion.scoped(Fusion, Controller)
+local scope = BaseController(Controller)
 
 type Scope = typeof(scope)
 
