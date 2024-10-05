@@ -11,19 +11,17 @@ local cmd: CmdrUtils.CMD = {
 			Type = "number",
 			Name = "radius",
 			Description = "The provided radius.",
-			Default = 10,
 		},
 		{
 			Type = "vector3",
 			Name = "Position",
 			Description = "The provided position.",
-			Default = 0,
 		},
 		{
 			Type = "number",
 			Name = "Block",
 			Description = "The id for the block",
-			Default = 0,
+			--Default = 0,
 		},
 		{
 			Type = "boolean",
