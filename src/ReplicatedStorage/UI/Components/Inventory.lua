@@ -95,8 +95,6 @@ function Inventory:Init(inventory: {})
 
 	Inventory.Inventory = inventory
 
-	local scale = ScaleController(scope, 3)
-
 	Inventory.UI = scope:New("ScreenGui")({
 		ResetOnSpawn = false,
 		Name = "Inventory",
@@ -108,9 +106,7 @@ function Inventory:Init(inventory: {})
 				Position = UDim2.fromScale(0.5, 0.55),
 				Transparency = 1,
 				[Children] = {
-					scope:New("UIScale")({
-						Scale = scale,
-					}),
+					ScaleController(scope, 3),
 					scope:New("ImageLabel")({
 						Name = "Inventory",
 						Size = UDim2.fromOffset(320, 113),

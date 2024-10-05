@@ -1,8 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local IconsController = require(ReplicatedStorage.UI.Controllers.IconsController)
-local Shop = require(ReplicatedStorage.UI.Controllers.Shop)
+local ShopController = require(ReplicatedStorage.UI.Controllers.ShopController)
 
-Shop:CreatePage("Support")
+ShopController:CreatePage("Support")
 	:CreateProduct(
 		"Support",
 		"GamePass",
@@ -24,12 +24,12 @@ Shop:CreatePage("Support")
 	)
 	:Init()
 
-Shop:SetPage("Support")
+ShopController:SetPage("Support")
 
 IconsController:AddButtonIcon("rbxassetid://96354796118569", function(_: InputObject, _: number): nil
 	print("activate shop")
 
-	Shop:Toggle()
+	ShopController:Toggle()
 
 	return
 end):Init()

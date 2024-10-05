@@ -1,11 +1,10 @@
 local MarketplaceService = game:GetService("MarketplaceService")
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local BaseController = require(script.Parent.BaseController)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Text = require(ReplicatedStorage.UI.Components.Text)
 local children = Fusion.Children
 local event = Fusion.OnEvent
-local ScaleController = require(ReplicatedStorage.UI.Controllers.ScaleController)
 
 --[[
 Image = "rbxassetid://130406054362730",
@@ -15,16 +14,15 @@ ImagePressed = "rbxassetid://108276672955665",
 
 local ShopController = {
 	Instance = nil :: Instance?,
-	Scope = Fusion.scoped(Fusion),
 	Pages = {},
 	Page = nil :: Fusion.ScopedObject?,
 }
 
-function ShopController:CreatePage(name: string): typeof(ShopController)
-	assert(ShopController.Instance == nil, "Shop UI must not init !")
-	assert(ShopController.Pages[name] == nil, "Page already exist !")
+function ShopController.CreatePage(self: Scope, name: string): Scope
+	assert(self.Instance == nil, "Shop UI must not init !")
+	assert(self.Pages[name] == nil, "Page already exist !")
 
-	ShopController.Pages[name] = {
+	self.Pages[name] = {
 		Products = {},
 	}
 
@@ -39,16 +37,11 @@ type PageElement = {
 	Color: ColorSequence,
 }
 
-function ShopController:CreateProduct(
-	name: string,
-	type: ProductType,
-	id: number,
-	color: ColorSequence?
-): typeof(ShopController)
-	assert(ShopController.Instance == nil, "Shop UI must not init !")
-	assert(ShopController.Pages[name] ~= nil, "Page already exist !")
+function ShopController:CreateProduct(name: string, type: ProductType, id: number, color: ColorSequence?): Scope
+	assert(self.Instance == nil, "Shop UI must not init !")
+	assert(self.Pages[name] ~= nil, "Page already exist !")
 
-	table.insert(ShopController.Pages[name].Products, {
+	table.insert(self.Pages[name].Products, {
 		Type = type,
 		Color = color or ColorSequence.new(Color3.new(1, 1, 1)),
 		ID = id,
@@ -57,34 +50,32 @@ function ShopController:CreateProduct(
 	return self
 end
 
-function ShopController:GetProductInfo(id: number, type: ProductType)
+function ShopController.GetProductInfo(_: Scope, id: number, type: ProductType)
 	local info = MarketplaceService:GetProductInfo(id, Enum.InfoType[type])
 
 	return info
 end
 
-function ShopController:createPages()
-	local scope = ShopController.Scope
-
+function ShopController.createPages(self: Scope)
 	local pages = {}
 
 	local function createPageElements(page: { PageElement })
 		local elements = {}
 
 		for index, element in page do
-			local btnScale = scope:Value(1)
+			local btnScale = self:Value(1)
 
 			local text = "BUY-"
 
 			if element.ID ~= 0 then
-				local productInfo = ShopController:GetProductInfo(element.ID, element.Type)
+				local productInfo = self:GetProductInfo(element.ID, element.Type)
 
 				text ..= productInfo.PriceInRobux
 			else
 				text ..= "0"
 			end
 
-			elements[index] = scope:New("ImageLabel")({
+			elements[index] = self:New("ImageLabel")({
 				Size = UDim2.fromOffset(103, 153),
 				LayoutOrder = index,
 				BackgroundTransparency = 1,
@@ -92,11 +83,11 @@ function ShopController:createPages()
 				ResampleMode = Enum.ResamplerMode.Pixelated,
 				ScaleType = Enum.ScaleType.Fit,
 				[children] = {
-					scope:New("UIGradient")({
+					self:New("UIGradient")({
 						Color = element.Color,
 						Rotation = -90,
 					}),
-					scope:New("ImageButton")({
+					self:New("ImageButton")({
 						Image = "rbxassetid://130406054362730",
 						HoverImage = "rbxassetid://76456082035992",
 						PressedImage = "rbxassetid://108276672955665",
@@ -113,10 +104,10 @@ function ShopController:createPages()
 							btnScale:set(1)
 						end,
 						[children] = {
-							scope:New("UIScale")({
+							self:New("UIScale")({
 								Scale = btnScale,
 							}),
-							Text(scope, {
+							Text(self, {
 								Text = text,
 								Position = UDim2.fromScale(0.5, 0.5),
 								AnchorPoint = Vector2.one / 2,
@@ -131,8 +122,8 @@ function ShopController:createPages()
 		return elements
 	end
 
-	for name, page in ShopController.Pages do
-		local uiPage = scope:New("ScrollingFrame")({
+	for name, page in self.Pages do
+		local uiPage = self:New("ScrollingFrame")({
 			Name = name,
 			Size = UDim2.fromScale(1, 1),
 			ScrollBarImageTransparency = 0.5,
@@ -144,12 +135,12 @@ function ShopController:createPages()
 			CanvasSize = UDim2.new(0, 0, 0, 0),
 			ScrollingDirection = Enum.ScrollingDirection.X,
 			[children] = {
-				scope:New("UIListLayout")({
+				self:New("UIListLayout")({
 					FillDirection = Enum.FillDirection.Horizontal,
 					Padding = UDim.new(0, 3),
 					HorizontalAlignment = Enum.HorizontalAlignment.Left,
 				}),
-				scope:New("UIPadding")({
+				self:New("UIPadding")({
 					PaddingBottom = UDim.new(0, 4),
 				}),
 				createPageElements(page.Products),
@@ -162,18 +153,17 @@ function ShopController:createPages()
 	return pages
 end
 
-function ShopController:createPageSeletionBar()
+function ShopController.createPageSeletionBar(self: Scope)
 	--assert(ShopController.Instance == nil, "Do not call Init twice!")
-	local scope = ShopController.Scope
 
 	local selectionBar = {}
 
 	local size = 0
 
-	for name, _ in ShopController.Pages do
+	for name, _ in self.Pages do
 		local xSize = name:len() * 7 + (name:len() - 1) * 2 + 12
 
-		local ui = scope:New("ImageButton")({
+		local ui = self:New("ImageButton")({
 			Name = name,
 			Size = UDim2.fromOffset(xSize, 21),
 			Position = UDim2.fromOffset(size, 0),
@@ -181,15 +171,14 @@ function ShopController:createPageSeletionBar()
 			ScaleType = Enum.ScaleType.Slice,
 			SliceCenter = Rect.new(6, 6, 8, 7),
 			BackgroundTransparency = 1,
-			Image = scope:Computed(function(use)
-				return use(ShopController.Page) == name and "rbxassetid://123355134162438"
-					or "rbxassetid://130516409121801"
+			Image = self:Computed(function(use)
+				return use(self.Page) == name and "rbxassetid://123355134162438" or "rbxassetid://130516409121801"
 			end),
 			[event("Activated")] = function()
-				ShopController.Page:set(name)
+				self.Page:set(name)
 			end,
 			[children] = {
-				Text(scope, { Text = name, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5) }),
+				Text(self, { Text = name, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5) }),
 			},
 		})
 		table.insert(selectionBar, ui)
@@ -200,31 +189,26 @@ function ShopController:createPageSeletionBar()
 	return selectionBar
 end
 
-function ShopController:Init()
-	assert(ShopController.Instance == nil, "Do not call Init twice!")
-	local scope = ShopController.Scope
+function ShopController.Init(self: Scope)
+	assert(self.Instance == nil, "Do not call Init twice!")
 
-	local scale = ScaleController(scope, 3)
+	local pages = self:createPages()
 
-	local pages = ShopController:createPages()
+	self.Page = self:Value("")
 
-	ShopController.Page = scope:Value("")
-
-	ShopController.Instance = scope:New("ScreenGui")({
+	self.Instance = self:New("ScreenGui")({
 		ResetOnSpawn = false,
 		Name = "Shop",
 		[children] = {
-			scope:New("Frame")({
+			self:New("Frame")({
 				Transparency = 1,
 				Size = UDim2.fromOffset(320, 182),
 				Position = UDim2.fromScale(0.5, 0.5),
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				[children] = {
-					ShopController:createPageSeletionBar(),
-					scope:New("UIScale")({
-						Scale = scale,
-					}),
-					scope:New("ImageLabel")({
+					self:createPageSeletionBar(),
+					self:Scale(3),
+					self:New("ImageLabel")({
 						AnchorPoint = Vector2.new(0, 1),
 						Position = UDim2.fromScale(0, 1),
 						Size = UDim2.fromOffset(320, 165),
@@ -233,21 +217,21 @@ function ShopController:Init()
 						ScaleType = Enum.ScaleType.Fit,
 						ResampleMode = Enum.ResamplerMode.Pixelated,
 						[children] = {
-							scope:New("UIGradient")({
+							self:New("UIGradient")({
 								Color = ColorSequence.new({
 									ColorSequenceKeypoint.new(0, Color3.fromHex("02029d")),
 									ColorSequenceKeypoint.new(1, Color3.fromHex("#3c1678")),
 								}),
 								Rotation = 90,
 							}),
-							scope:New("UIPadding")({
+							self:New("UIPadding")({
 								PaddingBottom = UDim.new(0, 6),
 								PaddingLeft = UDim.new(0, 3),
 								PaddingRight = UDim.new(0, 2),
 								PaddingTop = UDim.new(0, 2),
 							}),
-							scope:Computed(function(use)
-								return pages[use(ShopController.Page)]
+							self:Computed(function(use)
+								return pages[use(self.Page)]
 							end),
 						},
 					}),
@@ -257,33 +241,14 @@ function ShopController:Init()
 	})
 end
 
-function ShopController:SetPage(name: string)
-	assert(ShopController.Instance ~= nil, "Must be init !")
+function ShopController.SetPage(self: Scope, name: string)
+	assert(self.Instance ~= nil, "Must be init !")
 
-	ShopController.Page:set(name)
+	self.Page:set(name)
 end
 
-function ShopController:Visible()
-	assert(ShopController.Instance ~= nil, "Must be init !")
+local scope = BaseController(ShopController)
 
-	ShopController.Instance.Parent = Players.LocalPlayer.PlayerGui
-end
+type Scope = typeof(scope)
 
-function ShopController:Invisible()
-	assert(ShopController.Instance ~= nil, "Must be init !")
-
-	ShopController.Instance.Parent = nil
-end
-
-function ShopController:Toggle()
-	assert(ShopController.Instance ~= nil, "Must be init !")
-	local active = ShopController.Instance.Parent ~= nil
-
-	if active then
-		ShopController:Invisible()
-	else
-		ShopController:Visible()
-	end
-end
-
-return ShopController
+return scope

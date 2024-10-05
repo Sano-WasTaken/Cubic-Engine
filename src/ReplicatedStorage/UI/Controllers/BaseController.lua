@@ -6,11 +6,15 @@ local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local BaseController = {
 	-- OVERRIDE IT !
 	Instance = nil :: Instance?,
+	Init = nil :: ((self: BaseScope) -> nil)?,
 }
 
+--[[
 function BaseController.Init(_: BaseScope)
 	error("Must override init method.")
-end
+
+
+end]]
 
 function BaseController.Toggle(self: BaseScope)
 	local active = self.Instance.Parent ~= nil
@@ -37,11 +41,9 @@ end
 export type BaseScope = typeof(BaseController) & Fusion.Scope<typeof(Fusion)>
 
 return function(Controller)
-	setmetatable(Controller, { __index = BaseController })
-
 	Controller.Scale = ScaleController
 
-	local scope = Fusion.scoped(Fusion, Controller)
+	local scope = Fusion.scoped(Fusion, Controller, BaseController)
 
 	return scope
 end

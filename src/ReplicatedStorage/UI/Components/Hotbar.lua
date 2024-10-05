@@ -91,8 +91,6 @@ function Hotbar:Init(inventory: {})
 	Hotbar.SelectedSlot = scope:Value(0)
 	Hotbar.Inventory = inventory
 
-	local scale = ScaleController(scope, 3)
-
 	Hotbar.UI = scope:New("ScreenGui")({
 		ResetOnSpawn = false,
 		Name = "Hotbar",
@@ -104,9 +102,7 @@ function Hotbar:Init(inventory: {})
 				Position = UDim2.new(0.5, 0, 1, -15),
 				Transparency = 1,
 				[Children] = {
-					scope:New("UIScale")({
-						Scale = scale,
-					}),
+					ScaleController(scope, 3),
 					scope:New("UIListLayout")({
 						Padding = UDim.new(0, 3),
 						SortOrder = Enum.SortOrder.LayoutOrder,

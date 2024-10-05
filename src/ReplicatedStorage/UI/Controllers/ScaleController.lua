@@ -23,7 +23,7 @@ return function(scope: Fusion.Scope<typeof(Fusion)>, value: number)
 	table.insert(UIs, scale)
 
 	return scope:New("UIScale")({
-		scale = scope:Computed(function(use)
+		Scale = scope:Computed(function(use)
 			return use(scale) * value
 		end),
 	})
