@@ -5,7 +5,7 @@ local children = Fusion.Children
 local Text = require(ReplicatedStorage.UI.Components.Text)
 local Shop = require(ReplicatedStorage.UI.Controllers.Shop)
 
-Shop:CreatePage("Keys", "rbxassetid://72411379306174", "rbxassetid://93229239291611", 46)
+Shop:CreatePage("Keys")
 	:CreateProduct("Keys", "DP", 0, ColorSequence.new(Color3.fromHex("#066aa8"), Color3.fromHex("#1446d1")))
 	:CreateProduct(
 		"Keys",
@@ -15,7 +15,7 @@ Shop:CreatePage("Keys", "rbxassetid://72411379306174", "rbxassetid://93229239291
 	)
 	:CreateProduct("Keys", "DP", 0, ColorSequence.new(Color3.fromHex("9d0407"), Color3.fromHex("d14414")))
 	:CreateProduct("Keys", "DP", 0, ColorSequence.new(Color3.fromHex("#acacac"), Color3.fromHex("#734332")))
-	:CreatePage("Packs", "rbxassetid://88150838551306", "rbxassetid://134768540974493", 55)
+	:CreatePage("Packs")
 	:CreateProduct("Packs", "DP", 0, ColorSequence.new(Color3.fromHex("#066aa8"), Color3.fromHex("#1446d1")))
 	:CreateProduct(
 		"Packs",

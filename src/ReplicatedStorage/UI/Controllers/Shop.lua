@@ -19,19 +19,11 @@ local ShopController = {
 	Page = nil :: Fusion.ScopedObject?,
 }
 
-function ShopController:CreatePage(
-	name: string,
-	image: string,
-	imagePressed: string,
-	xSize: number
-): typeof(ShopController)
+function ShopController:CreatePage(name: string): typeof(ShopController)
 	assert(ShopController.Instance == nil, "Shop UI must not init !")
 	assert(ShopController.Pages[name] == nil, "Page already exist !")
 
 	ShopController.Pages[name] = {
-		Image = image,
-		ImagePressed = imagePressed,
-		XSize = xSize,
 		Products = {},
 	}
 
@@ -39,7 +31,7 @@ function ShopController:CreatePage(
 end
 
 type PageElement = {
-	Type: string,
+	Type: "DP" | "GP",
 	ID: number,
 	Color: ColorSequence,
 }
@@ -96,7 +88,7 @@ function ShopController:createPages()
 						SliceCenter = Rect.new(2, 2, 71, 16),
 						Position = UDim2.new(0.5, 0, 1, -10),
 						AnchorPoint = Vector2.new(0.5, 1),
-						Size = UDim2.fromOffset(text:len() * 11 + 6, 21),
+						Size = UDim2.fromOffset(text:len() * 11 + 10, 21),
 						[event("MouseEnter")] = function()
 							btnScale:set(1.05)
 						end,
@@ -161,24 +153,31 @@ function ShopController:createPageSeletionBar()
 
 	local size = 0
 
-	for name, page in ShopController.Pages do
+	for name, _ in ShopController.Pages do
+		local xSize = name:len() * 7 + (name:len() - 1) * 2 + 12
+
 		local ui = scope:New("ImageButton")({
 			Name = name,
-			Size = UDim2.fromOffset(page.XSize, 21),
+			Size = UDim2.fromOffset(xSize, 21),
 			Position = UDim2.fromOffset(size, 0),
 			ResampleMode = Enum.ResamplerMode.Pixelated,
-			ScaleType = Enum.ScaleType.Fit,
+			ScaleType = Enum.ScaleType.Slice,
+			SliceCenter = Rect.new(6, 6, 8, 7),
 			BackgroundTransparency = 1,
 			Image = scope:Computed(function(use)
-				return use(ShopController.Page) == name and page.ImagePressed or page.Image
+				return use(ShopController.Page) == name and "rbxassetid://123355134162438"
+					or "rbxassetid://130516409121801"
 			end),
 			[event("Activated")] = function()
 				ShopController.Page:set(name)
 			end,
+			[children] = {
+				Text(scope, { Text = name, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5) }),
+			},
 		})
 		table.insert(selectionBar, ui)
 
-		size += page.XSize - 1
+		size += xSize - 1
 	end
 
 	return selectionBar
