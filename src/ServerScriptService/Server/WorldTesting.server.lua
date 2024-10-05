@@ -35,7 +35,7 @@ for _, _player in Players:GetPlayers() do
 end
 
 --WorldManager:Delete(0, 2, 0)
-WorldManager:Insert(Block.new(BlockEnum.Chest):SetPosition(0, 2, 0))
+--[[WorldManager:Insert(Block.new(BlockEnum.Chest):SetPosition(0, 2, 0))
 local block = WorldManager:GetBlock(0, 2, 0)
 
 if block then
@@ -60,7 +60,7 @@ if block then
 			print(entityf:GetFacing(), entityf:GetPosition())
 		end
 	end)
-end
+end]]
 
 print("player loads")
 
