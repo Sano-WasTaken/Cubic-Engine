@@ -1,63 +1,93 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
+local Slot = require(ReplicatedStorage.UI.Components.Slot)
+local Text = require(ReplicatedStorage.UI.Components.Text)
 local BaseController = require(ReplicatedStorage.UI.Controllers.BaseController)
 local GetMesh = require(ReplicatedStorage.UI.Utils.GetMesh)
 
 local children = Fusion.Children
-local event = Fusion.OnEvent
 
 local Controller = {
 	Slots = {},
+	Inventory = {},
 }
+
+Controller.CreateSlot = Slot
+Controller.CreateText = Text
+
+local function areTheSame(t1: { any }, t2: { any }): boolean
+	for i, k in t1 do
+		if k ~= t2[i] then
+			return false
+		end
+	end
+
+	return true
+end
 
 function Controller.createSlots(self: Scope)
 	local slots = {}
 
 	for i = 1, 9 do
-		local item: { ID: number, Amount: number }? = self.Inventory[i]
+		local item: { ID: number, Amount: number }? = self.Inventory[tostring(i + 3 * 9)]
+
+		local currentId: number?
+		local viewport: ViewportFrame?
 
 		local slotValue = self:Value(item)
 
-		self.Slots[i] = slotValue
+		self.Slots[i + 3 * 9] = slotValue
 
-		slots[i] = self:Computed(function(use1, _)
-			use1(slotValue)
+		slots[i] = self:CreateSlot({
+			Image = self:Computed(function(use2)
+				return (use2(self.SelectedSlot) == i) and "rbxassetid://83778210351566" or "rbxassetid://95455592822381"
+			end),
+			LayoutOrder = i,
+			Childrens = {
+				self:Computed(function(use)
+					--print(use(slotValue))
 
-			item = self.Inventory[i + 3 * 9] or self.Inventory[tostring(i + 3 * 9)]
+					item = use(slotValue)
 
-			local part, camera
+					local isSameID: boolean = item and currentId == item.ID
 
-			if item then
-				part, camera = GetMesh(item.ID)
-			end
+					if not isSameID and item then
+						currentId = item.ID
 
-			return self:New("ImageButton")({
-				Size = UDim2.fromOffset(32, 32),
-				LayoutOrder = i,
-				ResampleMode = Enum.ResamplerMode.Pixelated,
-				--Image = "rbxassetid://88929582556128",
-				--Image = i == 8 and "rbxassetid://135600450644016" or "rbxassetid://88929582556128",
-				Image = self:Computed(function(use2)
-					return (use2(self.SelectedSlot) == i) and "rbxassetid://135600450644016"
-						or "rbxassetid://88929582556128"
+						local part, camera = GetMesh(item.ID)
+
+						print("recreate")
+
+						viewport = self:New("ViewportFrame")({
+							Transparency = 1,
+							Size = UDim2.fromOffset(30, 30),
+							AnchorPoint = Vector2.new(0.5, 0.5),
+							Position = UDim2.fromScale(0.5, 0.5),
+							CurrentCamera = camera,
+							[children] = { part },
+						})
+					end
+
+					return item and viewport or nil
 				end),
-				BackgroundTransparency = 1,
-				[children] = {
-					self:New("ViewportFrame")({
-						Transparency = 1,
-						Size = UDim2.fromOffset(30, 30),
-						AnchorPoint = Vector2.new(0.5, 0.5),
-						Position = UDim2.fromScale(0.5, 0.5),
-						CurrentCamera = camera,
-						[children] = { part },
-					}),
-				},
-				[event("Activated")] = function()
-					local slot = (self:GetSelectedSlot() == i) and 0 or i
-					self:SetSelectedSlot(slot)
-				end,
-			})
-		end)
+				self:Computed(function(use)
+					item = use(slotValue)
+
+					return item
+							and self:CreateText({
+								Text = tostring(item.Amount or 1),
+								AnchorPoint = Vector2.new(1, 1),
+								Position = UDim2.fromOffset(30, 30),
+								TextScale = 7.5 / 1.5,
+							})
+						or nil
+				end),
+			},
+			Activated = function()
+				local slot = (self:GetSelectedSlot() == i) and 0 or i
+				self:SetSelectedSlot(slot)
+			end,
+		})
 	end
 
 	return slots
@@ -107,14 +137,18 @@ function Controller.Init(self: Scope, inventory: {})
 	})
 end
 
-function Controller.Update(self: Scope, inventory: {})
+function Controller.Update(self: Scope, inventory: { [string]: any })
 	assert(self.Instance ~= nil, "must init the UI before toggling")
 	local oldInv = self.Inventory
 
 	self.Inventory = inventory
 
 	for i, item in inventory do
-		local slot = self.Slots[i]
+		if oldInv[i] ~= nil and areTheSame(item, oldInv[i]) then
+			continue
+		end
+
+		local slot = self.Slots[tonumber(i)]
 
 		if slot then
 			slot:set(item)
@@ -123,15 +157,13 @@ function Controller.Update(self: Scope, inventory: {})
 
 	for i, _ in oldInv do
 		if inventory[i] == nil then
-			local slot = self.Slots[i]
+			local slot = self.Slots[tonumber(i)]
 
 			if slot then
 				slot:set(nil)
 			end
 		end
 	end
-
-	--Hotbar.Inventory:set(inventory)
 end
 
 local scope = BaseController(Controller)

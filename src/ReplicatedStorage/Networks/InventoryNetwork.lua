@@ -4,17 +4,17 @@ local Bytenet = require(ReplicatedStorage.Packages.Bytenet)
 
 local packets = Bytenet.defineNamespace("Inventory", function()
 	return {
-		GetInventory = Bytenet.definePacket({
-			value = Bytenet.unknown,
+		RequestInventory = Bytenet.definePacket({
+			value = Bytenet.nothing,
 		}),
 
-		UpdateInventory = Bytenet.definePacket({
+		SendInventory = Bytenet.definePacket({
 			value = Bytenet.unknown,
 		}),
 
 		RequestSwapItem = Bytenet.definePacket({
 			value = Bytenet.struct({
-				id = Bytenet.uint16,
+				id = Bytenet.optional(Bytenet.uint16),
 				indexA = Bytenet.uint16,
 				indexB = Bytenet.uint16,
 			}),

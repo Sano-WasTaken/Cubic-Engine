@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local InventoryNetwork = require(ReplicatedStorage.Networks.InventoryNetwork)
 local HotbarController = require(ReplicatedStorage.UI.Controllers.HotbarController)
 local InventoryController = require(ReplicatedStorage.UI.Controllers.InventoryController)
 
@@ -21,6 +22,15 @@ local keybinds = {
 
 HotbarController:Init({})
 InventoryController:Init({})
+
+InventoryNetwork.SendInventory.listen(function(data: any)
+	print(data)
+
+	HotbarController:Update(data)
+	InventoryController:Update(data)
+end)
+
+InventoryNetwork.RequestInventory.send()
 
 HotbarController:Visible()
 

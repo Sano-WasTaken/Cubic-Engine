@@ -1,20 +1,42 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TouchInputService = game:GetService("TouchInputService")
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
+local Slot = require(ReplicatedStorage.UI.Components.Slot)
+local Text = require(ReplicatedStorage.UI.Components.Text)
 local children = Fusion.Children
-local event = Fusion.OnEvent
 local BaseController = require(ReplicatedStorage.UI.Controllers.BaseController)
 local GetMesh = require(ReplicatedStorage.UI.Utils.GetMesh)
+
 local Controller = {
-	Inventory = {},
-	Slots = {},
+	Inventory = {} :: { [string]: any }, -- Space array
+	Slots = {}, -- array
 }
 
-function Controller.Update(self: Scope, inventory: {})
+Controller.CreateSlot = Slot
+Controller.CreateText = Text
+
+local function areTheSame(t1: { any }, t2: { any }): boolean
+	for i, k in t1 do
+		if k ~= t2[i] then
+			return false
+		end
+	end
+
+	return true
+end
+
+function Controller.Update(self: Scope, inventory: { [string]: any })
 	assert(self.Instance ~= nil, "must init the UI before toggling")
 	local oldInv = self.Inventory
 
+	self.Inventory = inventory
+
 	for i, item in inventory do
-		local slot = self.Slots[i]
+		if oldInv[i] ~= nil and areTheSame(item, oldInv[i]) then
+			continue
+		end
+
+		local slot = self.Slots[tonumber(i)]
 
 		if slot then
 			slot:set(item)
@@ -23,7 +45,7 @@ function Controller.Update(self: Scope, inventory: {})
 
 	for i, _ in oldInv do
 		if inventory[i] == nil then
-			local slot = self.Slots[i]
+			local slot = self.Slots[tonumber(i)]
 
 			if slot then
 				slot:set(nil)
@@ -32,11 +54,64 @@ function Controller.Update(self: Scope, inventory: {})
 	end
 end
 
-local function createSlot(scope: Scope, slotValue, index)
-	return scope:Computed(function(use, _)
+local function createSlot(self: Scope, slotValue, index: number)
+	local currentId: number?
+	local viewport: ViewportFrame?
+
+	return self:CreateSlot({
+		Image = "rbxassetid://123167957040866",
+		LayoutOrder = index,
+		Childrens = {
+			self:Computed(function(use)
+				local item = use(slotValue)
+
+				print(item)
+
+				local isSameID: boolean = item and currentId == item.ID
+
+				if not isSameID and item then
+					currentId = item.ID
+
+					local part, camera = GetMesh(item.ID)
+
+					print("recreate")
+
+					viewport = self:New("ViewportFrame")({
+						Transparency = 1,
+						Size = UDim2.fromOffset(30, 30),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.fromScale(0.5, 0.5),
+						CurrentCamera = camera,
+						[children] = { part },
+					})
+				end
+
+				return item and viewport or nil
+			end),
+			self:Computed(function(use)
+				local item = use(slotValue)
+
+				print(item)
+
+				return item
+						and self:CreateText({
+							Text = tostring(item.Amount or 1),
+							AnchorPoint = Vector2.new(1, 1),
+							Position = UDim2.fromOffset(30, 30),
+							TextScale = 7.5 / 1.5,
+						})
+					or nil
+			end),
+		},
+		Activated = function()
+			warn("click", index)
+		end,
+	})
+
+	--[[return scope:Computed(function(use, _)
 		use(slotValue)
 
-		local item = scope.Inventory[index]
+		local item = scope.Inventory[tostring(index)]
 
 		local part, camera
 
@@ -44,13 +119,10 @@ local function createSlot(scope: Scope, slotValue, index)
 			part, camera = GetMesh(item.ID)
 		end
 
-		return scope:New("ImageButton")({
-			Size = UDim2.fromOffset(32, 32),
-			LayoutOrder = index,
-			ResampleMode = Enum.ResamplerMode.Pixelated,
+		return scope:CreateSlot({
 			Image = "rbxassetid://123167957040866",
-			BackgroundTransparency = 1,
-			[children] = {
+			LayoutOrder = index,
+			Childrens = {
 				scope:New("ViewportFrame")({
 					Transparency = 1,
 					Size = UDim2.fromOffset(30, 30),
@@ -61,12 +133,18 @@ local function createSlot(scope: Scope, slotValue, index)
 						part,
 					},
 				}),
+				item and scope:CreateText({
+					Text = tostring(item.Amount or 1),
+					AnchorPoint = Vector2.new(1, 1),
+					Position = UDim2.fromOffset(30, 30),
+					TextScale = 7.5 / 1.5,
+				}) or nil,
 			},
-			[event("Activated")] = function()
-				--Inventory:SetSelectedSlot(index)
+			Activated = function()
+				warn("click", index)
 			end,
 		})
-	end)
+	end)]]
 end
 
 function Controller.createInventorySlots(self: Scope)

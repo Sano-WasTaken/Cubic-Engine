@@ -8,7 +8,7 @@ local InventoryComponent = {}
 
 setmetatable(InventoryComponent, { __index = Component })
 
-function InventoryComponent:new(size: number)
+function InventoryComponent:new(size: number): InventoryData
 	return {
 		Size = size or 1,
 		Items = {},
@@ -77,25 +77,16 @@ function InventoryComponent:InsertItem(item: Item.Item)
 	local FES: number = self:GetFirstEmptySlot() -- can be unused
 
 	-- if the inventory do not have any find slot with the id
-	if FSWIDS == 0 or FES < FSWIDS then
-		if FES ~= 0 then
-			self:SetItemAtIndex(item, FES)
-		end
-
-		return
-	end
-
-	-- inventory full
-	if FES == 0 then
-		return
-	end
-
 	local fitem: Item.Item? = self:GetItemAtIndex(FSWIDS)
 
 	if fitem then
 		local nitem = fitem:MergeItem(item)
 
 		if FES ~= 0 and nitem ~= nil and nitem ~= false then
+			self:SetItemAtIndex(item, FES)
+		end
+	else
+		if FES ~= 0 then
 			self:SetItemAtIndex(item, FES)
 		end
 	end
@@ -179,10 +170,20 @@ function InventoryComponent:Print()
 	end
 end
 
+function InventoryComponent:GetItems()
+	local container: InventoryData = self:GetContainerData()
+
+	return container.Items
+end
+
 function InventoryComponent:GetPercentagePerSlot()
 	return self:GetAmountOfSlotUsed() / self:GetSize()
 end
 
-export type InventoryComponent = typeof(InventoryComponent)
+export type InventoryData = {
+	Size: number,
+	Items: { any },
+}
+export type InventoryComponent = typeof(InventoryComponent) & InventoryData
 
 return InventoryComponent

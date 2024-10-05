@@ -41,7 +41,7 @@ end
 
 export type BaseScope = typeof(BaseController) & Fusion.Scope<typeof(Fusion)>
 
-return function(Controller)
+return function<T>(Controller: T & { [string]: any }): T & BaseScope & { Scale: typeof(ScaleController) }
 	Controller.Scale = ScaleController
 
 	local scope = Fusion.scoped(Fusion, Controller, BaseController)

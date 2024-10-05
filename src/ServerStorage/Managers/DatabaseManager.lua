@@ -1,5 +1,6 @@
 local DataStoreService = game:GetService("DataStoreService")
 local ServerStorage = game:GetService("ServerStorage")
+local Inventory = require(ServerStorage.Components.Inventory)
 --local MemoryStoreService = game:GetService("MemoryStoreService")
 
 --local Players = game:GetService("Players")
@@ -20,7 +21,7 @@ List of scopes !
 
 export type Island = { Chunks: {} }
 export type PlayerData = {
-	Inventory: {}, --: { [string]: Item.IItem },
+	Inventory: Inventory.InventoryData,
 	Coins: number,
 }
 
@@ -94,7 +95,6 @@ function Manager:GetIslandData(userId: number): Island
 
 	return self:GetData(database, tostring(userId)) or {
 		Chunks = {},
-		ExtraContent = {},
 	}
 end
 
@@ -112,7 +112,7 @@ function Manager:GetPlayerData(userId: string): PlayerData
 	local data
 
 	local template = {
-		Inventory = {},
+		Inventory = Inventory:new(4 * 9),
 		Coins = 0,
 	}
 
@@ -129,7 +129,7 @@ function Manager:GetPlayerData(userId: string): PlayerData
 	return data
 end
 
-function Manager:SavePlayerData(userId: string)
+function Manager:SavePlayerData(userId: string, deleteSession: boolean?)
 	local database = self:GetDataStoreFromScope(Scopes.PlayerData)
 
 	local session = self:GetSession(tostring(userId))
@@ -139,7 +139,10 @@ function Manager:SavePlayerData(userId: string)
 	end
 
 	self:SaveData(database, tostring(userId), session)
-	self:DeleteSession(tostring(userId))
+
+	if deleteSession then
+		self:DeleteSession(tostring(userId))
+	end
 end
 
 return Manager

@@ -2,16 +2,41 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
---local Inventory = require(ServerStorage.Classes)
---local Item = require(ServerStorage.Classes.Item)
 local Item = require(ServerStorage.Components.Item)
-local PlayerInventory = require(ServerStorage.Components.PlayerInventory)
-local DataProviderManager = require(ServerStorage.Managers.DatabaseManager)
-local PlayerInventoryManager = require(ServerStorage.Managers.PlayerInventoryManager)
---local InventoryManager = require(ServerStorage.Managers.InventoryManager)
+local PlayerInventoryGetter = require(ServerStorage.Managers.PlayerInventoryGetter)
 local InventoryNetwork = require(ReplicatedStorage.Networks.InventoryNetwork)
 
-local UpdateInventory = InventoryNetwork.UpdateInventory:Server()
+local getInventory = PlayerInventoryGetter.getInventory
+local removeInventory = PlayerInventoryGetter.removeInventory
+
+InventoryNetwork.RequestInventory.listen(function(_: nil, player: Player)
+	local inventory = getInventory(player):GetItems()
+
+	InventoryNetwork.SendInventory.sendTo(inventory, player)
+end)
+
+InventoryNetwork.RequestClear.listen(function(_: nil, player: Player)
+	getInventory(player):Clear()
+
+	InventoryNetwork.SendInventory.sendTo({}, player)
+end)
+
+InventoryNetwork.RequestGiveItem.listen(function(data: { amount: number, id: number }, player: Player)
+	local inventory = getInventory(player)
+
+	inventory:InsertItem(Item:createItem(data.id, data.amount))
+
+	InventoryNetwork.SendInventory.sendTo(inventory:GetItems(), player)
+end)
+
+InventoryNetwork.RequestSwapItem.listen(function(data: { id: number?, indexA: number, indexB: number }, player: Player)
+	warn("later.", data, player)
+end)
+
+Players.PlayerAdded:Connect(getInventory)
+Players.PlayerRemoving:Connect(removeInventory)
+
+--[[local UpdateInventory = InventoryNetwork.UpdateInventory:Server()
 local RequestSwapItem = InventoryNetwork.RequestSwapItem:Server()
 local RequestEquipItem = InventoryNetwork.RequestEquipItem:Server()
 local RequestGiveItem = InventoryNetwork.RequestGiveItem:Server()
@@ -63,4 +88,4 @@ end)
 
 RequestClearInventory:On(function(player: Player)
 	getInventory(player):Clear()
-end)
+end)]]
