@@ -4,7 +4,7 @@ local ScaleController = require(script.Parent.ScaleController)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 
 local BaseController = {
-	-- OVERRIDE IT !
+	-- OVERRIDE THEM !
 	Instance = nil :: Instance?,
 	Init = nil :: ((self: BaseScope) -> nil)?,
 }
