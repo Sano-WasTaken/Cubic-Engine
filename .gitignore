@@ -4,4 +4,5 @@ roblox.yml
 selene.toml
 wally.lock
 sourcemap.json
+src/ServerScriptService/Other
 .vscode
