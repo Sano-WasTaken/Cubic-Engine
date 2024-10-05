@@ -1,5 +1,7 @@
 local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local BaseController = require(script.Parent.BaseController)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Text = require(ReplicatedStorage.UI.Components.Text)
@@ -63,17 +65,34 @@ function ShopController.createPages(self: Scope)
 		local elements = {}
 
 		for index, element in page do
-			local btnScale = self:Value(1)
+			local hovered = self:Value(false)
 
 			local text = "BUY-"
 
+			local productInfo
+
 			if element.ID ~= 0 then
-				local productInfo = self:GetProductInfo(element.ID, element.Type)
+				productInfo = self:GetProductInfo(element.ID, element.Type)
 
 				text ..= productInfo.PriceInRobux
 			else
 				text ..= "0"
 			end
+
+			local purchaseValue = self:Value(false)
+
+			local function updatePurchase()
+				if element.Type == "GamePass" then
+					local isPurchased = MarketplaceService:UserOwnsGamePassAsync(Players.LocalPlayer.UserId, element.ID)
+
+					if isPurchased then
+						purchaseValue:set(isPurchased)
+						text = "PURCHASED"
+					end
+				end
+			end
+
+			updatePurchase()
 
 			elements[index] = self:New("ImageLabel")({
 				Size = UDim2.fromOffset(103, 153),
@@ -83,14 +102,36 @@ function ShopController.createPages(self: Scope)
 				ResampleMode = Enum.ResamplerMode.Pixelated,
 				ScaleType = Enum.ScaleType.Fit,
 				[children] = {
+					Text(self, {
+						Text = `-{element.Type}-`,
+						Position = UDim2.new(0.5, 0, 0, 10),
+						AnchorPoint = Vector2.new(0.5, 0),
+						--TextScale = 075.,
+					}),
+					self:New("ImageLabel")({
+						BackgroundTransparency = 1,
+						Image = "rbxassetid://" .. productInfo.IconImageAssetId,
+						ResampleMode = Enum.ResamplerMode.Default, -- append to change in the future.
+						Size = UDim2.fromOffset(75, 75),
+						AnchorPoint = Vector2.new(0.5, 0.5),
+						Position = UDim2.fromScale(0.5, 0.4),
+					}),
 					self:New("UIGradient")({
 						Color = element.Color,
 						Rotation = -90,
 					}),
 					self:New("ImageButton")({
-						Image = "rbxassetid://130406054362730",
-						HoverImage = "rbxassetid://76456082035992",
-						PressedImage = "rbxassetid://108276672955665",
+						Image = self:Computed(function(use)
+							return use(purchaseValue) and "rbxassetid://137812693508147"
+								or "rbxassetid://130406054362730"
+						end),
+						HoverImage = self:Computed(function(use)
+							return use(purchaseValue) and "rbxassetid://90235358958652" or "rbxassetid://76456082035992"
+						end),
+						PressedImage = self:Computed(function(use)
+							return use(purchaseValue) and "rbxassetid://100583906356826"
+								or "rbxassetid://108276672955665"
+						end),
 						ResampleMode = Enum.ResamplerMode.Pixelated,
 						ScaleType = Enum.ScaleType.Slice,
 						SliceCenter = Rect.new(2, 2, 71, 16),
@@ -98,21 +139,48 @@ function ShopController.createPages(self: Scope)
 						AnchorPoint = Vector2.new(0.5, 1),
 						Size = UDim2.fromOffset(text:len() * 7 + (text:len() - 1) * 2 + 10, 21),
 						[event("MouseEnter")] = function()
-							btnScale:set(1.05)
+							hovered:set(true)
+							self.CurrentTime:set(0)
 						end,
 						[event("MouseLeave")] = function()
-							btnScale:set(1)
+							hovered:set(false)
+						end,
+						[event("Activated")] = function()
+							if element.ID == 0 or self.peek(purchaseValue) then
+								return
+							end
+
+							if element.Type == "GamePass" then
+								MarketplaceService:PromptGamePassPurchase(Players.LocalPlayer, element.ID)
+
+								updatePurchase()
+							else
+								MarketplaceService:PromptProductPurchase(
+									Players.LocalPlayer,
+									element.ID,
+									false,
+									Enum.CurrencyType.Robux
+								)
+							end
 						end,
 						[children] = {
 							self:New("UIScale")({
-								Scale = btnScale,
+								Scale = self:Computed(function(use)
+									local hoveredValue = use(hovered)
+									local scale = 1 + (math.sin(use(self.CurrentTime) * 5) * 0.025)
+
+									return hoveredValue and scale or 1
+								end),
 							}),
-							Text(self, {
-								Text = text,
-								Position = UDim2.fromScale(0.5, 0.5),
-								AnchorPoint = Vector2.one / 2,
-								--TextScale = 075.,
-							}),
+							self:Computed(function(use)
+								use(purchaseValue)
+								return Text(self, {
+									Text = text,
+									Position = UDim2.fromScale(0.5, 0.5),
+									AnchorPoint = Vector2.one / 2,
+									--TextScale = 075.,
+								})
+							end),
 						},
 					}),
 				},
@@ -250,5 +318,11 @@ end
 local scope = BaseController(ShopController)
 
 type Scope = typeof(scope)
+
+scope.CurrentTime = scope:Value(0)
+
+RunService.RenderStepped:Connect(function(a0: number)
+	scope.CurrentTime:set(scope.peek(scope.CurrentTime) + a0)
+end)
 
 return scope

@@ -7,8 +7,6 @@ local InventoryController = require(ReplicatedStorage.UI.Controllers.InventoryCo
 
 --local size = 3 * 9
 
-local toggled = true
-
 local keybinds = {
 	[Enum.KeyCode.One] = 1,
 	[Enum.KeyCode.Two] = 2,
@@ -39,13 +37,7 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 	end
 
 	if input.KeyCode == Enum.KeyCode.E then
-		if toggled then
-			InventoryController:Visible()
-			HotbarController:Invisible()
-		else
-			HotbarController:Visible()
-			InventoryController:Invisible()
-		end
-		toggled = not toggled
+		InventoryController:Toggle()
+		HotbarController:Toggle()
 	end
 end)

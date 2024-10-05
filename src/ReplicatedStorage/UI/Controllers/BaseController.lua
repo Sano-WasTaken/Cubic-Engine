@@ -6,7 +6,7 @@ local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local BaseController = {
 	-- OVERRIDE THEM !
 	Instance = nil :: Instance?,
-	Init = nil :: ((self: BaseScope) -> nil)?,
+	Init = nil :: ((self: BaseScope, data: any?) -> nil)?,
 }
 
 --[[

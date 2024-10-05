@@ -1,5 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HotbarController = require(ReplicatedStorage.UI.Controllers.HotbarController)
 local IconsController = require(ReplicatedStorage.UI.Controllers.IconsController)
+local InventoryController = require(ReplicatedStorage.UI.Controllers.InventoryController)
 local ShopController = require(ReplicatedStorage.UI.Controllers.ShopController)
 
 ShopController:CreatePage("Support")
@@ -26,12 +28,17 @@ ShopController:CreatePage("Support")
 
 ShopController:SetPage("Support")
 
-IconsController:AddButtonIcon("rbxassetid://96354796118569", function(_: InputObject, _: number): nil
+IconsController:AddButtonIcon("rbxassetid://136080034567669", function(_: InputObject, _: number): nil
 	print("activate shop")
 
 	ShopController:Toggle()
 
 	return
-end):Init()
+end)
+	:AddButtonIcon("rbxassetid://71536529457307", function()
+		HotbarController:Toggle()
+		InventoryController:Toggle()
+	end)
+	:Init()
 
 IconsController:Visible()
