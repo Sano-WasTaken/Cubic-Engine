@@ -1,5 +1,4 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TouchInputService = game:GetService("TouchInputService")
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Slot = require(ReplicatedStorage.UI.Components.Slot)
 local Text = require(ReplicatedStorage.UI.Components.Text)
