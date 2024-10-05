@@ -53,7 +53,8 @@ function Controller.createSlots(self: Scope)
 					}),
 				},
 				[event("Activated")] = function()
-					self:SetSelectedSlot(i)
+					local slot = (self:GetSelectedSlot() == i) and 0 or i
+					self:SetSelectedSlot(slot)
 				end,
 			})
 		end)
