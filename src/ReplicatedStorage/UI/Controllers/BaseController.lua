@@ -11,6 +11,7 @@ local BaseController = {
 
 --[[
 function BaseController.Init(_: BaseScope)
+    assert(self.Instance == nil, "Do not init twice !")
 	error("Must override init method.")
 
 
