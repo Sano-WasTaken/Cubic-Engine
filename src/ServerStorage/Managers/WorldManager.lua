@@ -9,7 +9,6 @@ local Chunk = require(ServerStorage.Classes.Chunk)
 local DataProviderManager = require(ServerStorage.Managers.DatabaseManager)
 
 local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
-local ExecutionTimer = require(ReplicatedStorage.Utils.ExecutionTimer)
 
 -- [CLASS DECLARATION] --
 --

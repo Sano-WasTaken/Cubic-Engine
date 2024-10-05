@@ -3,7 +3,7 @@ local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local children = Fusion.Children
 local Characters = require(script.Characters)
 
-local IMAGE_ID = "rbxassetid://124127115213515"
+local IMAGE_ID = "rbxassetid://103746231516014"
 local CHARACTER_SIZE = UDim2.fromOffset(7, 11)
 local SPACE_SIZE = 2
 local ROW_SIZE = 6

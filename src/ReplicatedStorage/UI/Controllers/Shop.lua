@@ -1,3 +1,4 @@
+local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
@@ -30,15 +31,17 @@ function ShopController:CreatePage(name: string): typeof(ShopController)
 	return self
 end
 
+type ProductType = "GamePass" | "Product"
+
 type PageElement = {
-	Type: "DP" | "GP",
+	Type: ProductType,
 	ID: number,
 	Color: ColorSequence,
 }
 
 function ShopController:CreateProduct(
 	name: string,
-	type: "DP" | "GP",
+	type: ProductType,
 	id: number,
 	color: ColorSequence?
 ): typeof(ShopController)
@@ -54,6 +57,12 @@ function ShopController:CreateProduct(
 	return self
 end
 
+function ShopController:GetProductInfo(id: number, type: ProductType)
+	local info = MarketplaceService:GetProductInfo(id, Enum.InfoType[type])
+
+	return info
+end
+
 function ShopController:createPages()
 	local scope = ShopController.Scope
 
@@ -65,7 +74,15 @@ function ShopController:createPages()
 		for index, element in page do
 			local btnScale = scope:Value(1)
 
-			local text = "1400"
+			local text = "BUY-"
+
+			if element.ID ~= 0 then
+				local productInfo = ShopController:GetProductInfo(element.ID, element.Type)
+
+				text ..= productInfo.PriceInRobux
+			else
+				text ..= "0"
+			end
 
 			elements[index] = scope:New("ImageLabel")({
 				Size = UDim2.fromOffset(103, 153),
@@ -88,7 +105,7 @@ function ShopController:createPages()
 						SliceCenter = Rect.new(2, 2, 71, 16),
 						Position = UDim2.new(0.5, 0, 1, -10),
 						AnchorPoint = Vector2.new(0.5, 1),
-						Size = UDim2.fromOffset(text:len() * 11 + 10, 21),
+						Size = UDim2.fromOffset(text:len() * 7 + (text:len() - 1) * 2 + 10, 21),
 						[event("MouseEnter")] = function()
 							btnScale:set(1.05)
 						end,
