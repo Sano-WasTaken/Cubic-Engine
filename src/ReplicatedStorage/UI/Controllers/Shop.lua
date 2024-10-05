@@ -275,4 +275,15 @@ function ShopController:Invisible()
 	ShopController.Instance.Parent = nil
 end
 
+function ShopController:Toggle()
+	assert(ShopController.Instance ~= nil, "Must be init !")
+	local active = ShopController.Instance.Parent ~= nil
+
+	if active then
+		ShopController:Invisible()
+	else
+		ShopController:Visible()
+	end
+end
+
 return ShopController
