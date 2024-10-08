@@ -60,11 +60,6 @@ function BlockContent:IsUnbreakable()
 	return self.Unbreakable
 end
 
--- Server Only
-function BlockContent:tick()
-	print()
-end
-
 function BlockContent:GetLootTable() end
 
 function BlockContent:SetLootTable() end

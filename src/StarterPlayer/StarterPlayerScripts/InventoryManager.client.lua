@@ -23,16 +23,22 @@ local keybinds = {
 HotbarController:Init({})
 InventoryController:Init({})
 
-InventoryNetwork.SendInventory.listen(function(data: any)
-	print(data)
+local function updateInventory(data: { { Amount: number?, ID: number? } })
+	data = data or {}
 
 	HotbarController:Update(data)
 	InventoryController:Update(data)
-end)
+end
 
-InventoryNetwork.RequestInventory.send()
+local inventory = InventoryNetwork.RequestInventory.requestToServer()
+
+updateInventory(inventory)
+
+InventoryNetwork.SendInventory.listen(updateInventory)
 
 HotbarController:Visible()
+
+HotbarController.SelectedSlotChanged:Connect(InventoryNetwork.SelectSlot.sendToServer)
 
 UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
 	if gameProcessed then

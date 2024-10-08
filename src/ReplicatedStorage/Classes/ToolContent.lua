@@ -1,4 +1,6 @@
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local ItemContent = require(ReplicatedStorage.Classes.ItemContent)
 
 local ToolContent = ItemContent.Class:extends({
@@ -9,6 +11,12 @@ local ToolContent = ItemContent.Class:extends({
 })
 
 export type ToolContent = typeof(ToolContent)
+
+function ToolContent.GetClonedMesh(self: ToolContent): BasePart
+	local mesh = self.Mesh:Clone()
+
+	return mesh
+end
 
 function ToolContent:Use(position: Vector3, _: Vector3)
 	return { position }

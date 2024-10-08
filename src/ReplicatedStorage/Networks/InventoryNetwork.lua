@@ -1,44 +1,54 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Bytenet = require(ReplicatedStorage.Packages.Bytenet)
+local KISSNet = require(ReplicatedStorage.Classes.KISSNet)
 
-local packets = Bytenet.defineNamespace("Inventory", function()
-	return {
-		RequestInventory = Bytenet.definePacket({
-			value = Bytenet.nothing,
-		}),
+local packets = KISSNet.defineNamespace("Inventory", {
+	RequestInventory = KISSNet.defineFunction(function()
+		return KISSNet.nothing
+	end, function()
+		return KISSNet.array(KISSNet.dict({
+			ID = KISSNet.optional(KISSNet.number),
+			Amount = KISSNet.optional(KISSNet.number),
+		}))
+	end),
 
-		SendInventory = Bytenet.definePacket({
-			value = Bytenet.unknown,
-		}),
+	SelectSlot = KISSNet.defineEvent(function()
+		return KISSNet.number
+	end),
 
-		RequestSwapItem = Bytenet.definePacket({
-			value = Bytenet.struct({
-				id = Bytenet.optional(Bytenet.uint16),
-				indexA = Bytenet.uint16,
-				indexB = Bytenet.uint16,
-			}),
-		}),
+	SendInventory = KISSNet.defineEvent(function()
+		return KISSNet.array(KISSNet.dict({
+			ID = KISSNet.optional(KISSNet.number),
+			Amount = KISSNet.optional(KISSNet.number),
+		}))
+	end),
 
-		RequestMouseInteraction = Bytenet.definePacket({
-			value = Bytenet.struct({
-				selectedSlot = Bytenet.uint8,
-				origin = Bytenet.vec3,
-				direction = Bytenet.vec3,
-			}),
-		}),
+	SwapItem = KISSNet.defineEvent(function()
+		return KISSNet.dict({
+			chestID = KISSNet.optional(KISSNet.number),
+			indexA = KISSNet.number,
+			indexB = KISSNet.number,
+		})
+	end),
 
-		RequestGiveItem = Bytenet.definePacket({
-			value = Bytenet.struct({
-				id = Bytenet.uint16,
-				amount = Bytenet.uint8,
-			}),
-		}),
+	MouseInteraction = KISSNet.defineEvent(function()
+		return KISSNet.dict({
+			selectedSlot = KISSNet.number,
+			origin = KISSNet.vector3,
+			direction = KISSNet.vector3,
+		})
+	end),
 
-		RequestClear = Bytenet.definePacket({
-			value = Bytenet.nothing,
-		}),
-	}
-end)
+	GiveItem = KISSNet.defineEvent(function()
+		return KISSNet.dict({
+			ID = KISSNet.number,
+			Amount = KISSNet.number,
+		})
+	end),
+
+	Clear = KISSNet.defineEvent(function()
+		return KISSNet.nothing
+	end),
+})
 
 return packets

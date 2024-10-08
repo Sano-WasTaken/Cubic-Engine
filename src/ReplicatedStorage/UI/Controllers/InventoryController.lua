@@ -1,4 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local InventoryNetwork = require(ReplicatedStorage.Networks.InventoryNetwork)
+local DraggingFrameController = require(script.Parent.DraggingFrameController)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Slot = require(ReplicatedStorage.UI.Components.Slot)
 local Text = require(ReplicatedStorage.UI.Components.Text)
@@ -9,6 +12,7 @@ local GetMesh = require(ReplicatedStorage.UI.Utils.GetMesh)
 local Controller = {
 	Inventory = {} :: { [string]: any }, -- Space array
 	Slots = {}, -- array
+	DraggedSlot = 0,
 }
 
 Controller.CreateSlot = Slot
@@ -35,7 +39,7 @@ function Controller.Update(self: Scope, inventory: { [string]: any })
 			continue
 		end
 
-		local slot = self.Slots[tonumber(i)]
+		local slot = self.Slots[i]
 
 		if slot then
 			slot:set(item)
@@ -43,14 +47,16 @@ function Controller.Update(self: Scope, inventory: { [string]: any })
 	end
 
 	for i, _ in oldInv do
-		if inventory[i] == nil then
-			local slot = self.Slots[tonumber(i)]
+		if areTheSame(inventory[i], {}) then
+			local slot = self.Slots[i]
 
 			if slot then
 				slot:set(nil)
 			end
 		end
 	end
+
+	print(self.Inventory)
 end
 
 local function createSlot(self: Scope, slotValue, index: number)
@@ -63,6 +69,11 @@ local function createSlot(self: Scope, slotValue, index: number)
 		Childrens = {
 			self:Computed(function(use)
 				local item = use(slotValue)
+				local draggedSlot = use(self.DraggedSlot)
+
+				if draggedSlot == index then
+					return
+				end
 
 				local isSameID: boolean = item and currentId == item.ID
 
@@ -76,7 +87,8 @@ local function createSlot(self: Scope, slotValue, index: number)
 					end
 
 					viewport = self:New("ViewportFrame")({
-						Transparency = 1,
+						Transparency = 0,
+						BackgroundColor3 = Color3.fromHex("404041"),
 						Size = UDim2.fromOffset(30, 30),
 						AnchorPoint = Vector2.new(0.5, 0.5),
 						Position = UDim2.fromScale(0.5, 0.5),
@@ -90,7 +102,13 @@ local function createSlot(self: Scope, slotValue, index: number)
 			self:Computed(function(use)
 				local item = use(slotValue)
 
-				return item
+				local draggedSlot = use(self.DraggedSlot)
+
+				if draggedSlot == index then
+					return
+				end
+
+				return (item and item.ID ~= nil)
 						and self:CreateText({
 							Text = tostring(item.Amount or 1),
 							AnchorPoint = Vector2.new(1, 1),
@@ -101,7 +119,25 @@ local function createSlot(self: Scope, slotValue, index: number)
 			end),
 		},
 		Activated = function()
-			warn("click", index)
+			local item = self.peek(slotValue)
+			local draggedSlot = self.peek(self.DraggedSlot)
+
+			if draggedSlot == 0 and item ~= nil and item.ID ~= nil then
+				DraggingFrameController:Set(item)
+				self.DraggedSlot:set(index)
+			else
+				DraggingFrameController:Set(nil)
+
+				local itemB = self.Inventory[draggedSlot]
+				local slotB = self.Slots[draggedSlot]
+
+				slotB:set(item)
+				slotValue:set(itemB)
+
+				InventoryNetwork.SwapItem.sendToServer({ chestID = nil, indexA = index, indexB = draggedSlot })
+
+				self.DraggedSlot:set(0)
+			end
 		end,
 	})
 end
@@ -140,6 +176,8 @@ end
 
 function Controller.Init(self: Scope)
 	assert(self.Instance == nil, "Do not init twice !")
+
+	self.DraggedSlot = self:Value(0)
 
 	self.Instance = self:New("ScreenGui")({
 		ResetOnSpawn = false,

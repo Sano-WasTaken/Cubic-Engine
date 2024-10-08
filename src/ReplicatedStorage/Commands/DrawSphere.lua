@@ -5,7 +5,7 @@ local cmd: CmdrUtils.CMD = {
 	Name = "DrawSphere",
 	Aliases = { "DSP" },
 	Description = "Draw a Sphere with provided properties.",
-	Group = "Admin",
+	Group = "AdminPlus",
 	Args = {
 		{
 			Type = "number",
@@ -17,7 +17,7 @@ local cmd: CmdrUtils.CMD = {
 			Type = "vector3",
 			Name = "offset",
 			Description = "The provided position.",
-			Default = 0,
+			Default = Vector3.zero,
 		},
 		{
 			Type = "number",

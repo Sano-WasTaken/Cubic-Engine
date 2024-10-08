@@ -4,7 +4,7 @@ local Inventory = require(ServerStorage.Components.Inventory)
 --local MemoryStoreService = game:GetService("MemoryStoreService")
 
 --local Players = game:GetService("Players")
-local DATABASE_NAME = "Player_Database_PlayTester"
+local DATABASE_NAME = "Player_Database_PlayTesterV3"
 
 local function waitForBudget(requestType: Enum.DataStoreRequestType)
 	repeat
@@ -19,7 +19,13 @@ List of scopes !
 
 ]]
 
-export type Island = { Chunks: {} }
+export type chunk = {
+	cx: number,
+	cy: number,
+	chunk: buffer,
+	tileEntities: { any },
+}
+export type Island = { Chunks: { chunk } }
 export type PlayerData = {
 	Inventory: Inventory.InventoryData,
 	Coins: number,

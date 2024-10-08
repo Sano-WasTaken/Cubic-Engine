@@ -7,6 +7,9 @@ local Block = require(ServerStorage.Classes.Block)
 
 return function(_, radius: number, position: Vector3, id: number, empty: boolean)
 	local waiter = Waiter.new()
+
+	--waiter:SetExecutionDivider(2)
+	print(position)
 	DrawFunctions.DrawCircle(radius, position.X, position.Z, function(cx, cy)
 		waiter:Update()
 

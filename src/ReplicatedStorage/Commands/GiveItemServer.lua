@@ -13,7 +13,7 @@ return function(context, id: number, amount: number)
 
 		inventory:InsertItem(item)
 
-		InventoryNetwork.SendInventory.sendTo(inventory:GetItems(), context.Executor)
+		InventoryNetwork.SendInventory.sendToClient(context.Executor, inventory:GetItems())
 
 		return "Give success."
 	end

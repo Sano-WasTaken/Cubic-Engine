@@ -5,7 +5,7 @@ local cmd: CmdrUtils.CMD = {
 	Name = "DrawCircle",
 	Aliases = { "DC" },
 	Description = "Draw a circle with provided properties.",
-	Group = "Admin",
+	Group = "AdminPlus",
 	Args = {
 		{
 			Type = "number",

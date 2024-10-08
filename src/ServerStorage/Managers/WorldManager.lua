@@ -1,14 +1,20 @@
+--local Debris = game:GetService("Debris")
 local HttpService = game:GetService("HttpService")
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
+--local RunService = game:GetService("RunService")
+local Waiter = require(ReplicatedStorage.Classes.Waiter)
+local DatabaseManager = require(script.Parent.DatabaseManager)
 local Block = require(ServerStorage.Classes.Block)
+local BulkImport = require(ServerStorage.Classes.BulkImport)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Chunk = require(ServerStorage.Classes.Chunk)
 --local TileEntitiesManager = require(ServerStorage.Managers.TileEntitiesManager)
 local DataProviderManager = require(ServerStorage.Managers.DatabaseManager)
 
 local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
+
+local MAX_CHUNK_RADIUS = 30
 
 -- [CLASS DECLARATION] --
 --
@@ -17,7 +23,6 @@ local WorldManager = {
 	--
 	Container = {
 		Chunks = {},
-		ExtraContent = {},
 	},
 	IslandOwner = nil :: Player?,
 
@@ -29,6 +34,7 @@ local WorldManager = {
 	--
 	BlockAdded = Signal.new() :: Signal.Signal<Block.IBlock>,
 	BlockRemoved = Signal.new() :: Signal.Signal<Block.IBlock>,
+	BulkAdded = Signal.new() :: Signal.Signal<{ Block.IBlock }>,
 	ChunksGenerated = Signal.new() :: Signal.Signal<boolean>,
 	Decompressed = Signal.new() :: Signal.Signal<boolean>,
 }
@@ -68,20 +74,36 @@ end
 
 -- [CHUNKS UTILS] --
 --
-function WorldManager:GetChunks(): { [string]: { [string]: Chunk.Chunk } }
-	return self.Container.Chunks
+function WorldManager:IsChunkOut(cx: number, cy: number): boolean
+	return cx > MAX_CHUNK_RADIUS or cy > MAX_CHUNK_RADIUS
+end
+
+function WorldManager:GetChunks(): { Chunk.Chunk }
+	local chunks = {}
+
+	for _, rows in self.Container.Chunks do
+		for _, chunk in rows do
+			table.insert(chunks, chunk)
+		end
+	end
+
+	return chunks
 end
 
 function WorldManager:GetChunk(cx: number, cy: number): Chunk.Chunk?
-	local chunks = self:GetChunks()
+	if WorldManager:IsChunkOut(cx, cy) then
+		return
+	end
 
-	chunks[tostring(cx)] = chunks[tostring(cx)] or {}
+	local chunks = self.Container.Chunks
 
-	local chunk = chunks[tostring(cx)][tostring(cy)]
+	chunks[cx] = chunks[cx] or {}
+
+	local chunk = chunks[cx][cy]
 
 	if chunk == nil then
 		chunk = Chunk.new(cx, cy)
-		chunks[tostring(cx)][tostring(cy)] = chunk
+		chunks[cx][cy] = chunk
 	end
 
 	-- [[ you can add other schematics for chunks like custom chunks data organizing. ]] --
@@ -89,7 +111,7 @@ function WorldManager:GetChunk(cx: number, cy: number): Chunk.Chunk?
 	if typeof(chunk.chunk) == "buffer" then
 		chunk = Chunk.new(cx, cy, chunk.buffer, chunk.entity)
 
-		chunks[tostring(cx)][tostring(cy)] = chunk
+		chunks[cx][cy] = chunk
 	end
 
 	-- If you want to use JSON Encoding for the chunk
@@ -132,16 +154,59 @@ function WorldManager:IsBlockExist(x: number, y: number, z: number)
 	return (block:GetID() ~= 0 and BlockEnum[block:GetID()] ~= nil)
 end
 
+function WorldManager:BulkInsert(): BulkImport.BulkImport
+	local bulkImport = BulkImport.new()
+
+	bulkImport.Stopped:Connect(function(queue)
+		local waiter = Waiter.new()
+
+		for index, block in queue.container do
+			local x, y, z = block:GetPosition()
+
+			if self:IsBlockExist(x, y, z) then
+				table.remove(queue.container, index)
+				continue
+			end
+
+			local cx, cy = Chunk.getChunkPositionFromBlock(x, z)
+
+			local chunk = self:GetChunk(cx, cy)
+
+			if chunk == nil then
+				continue
+			end
+
+			waiter:Update()
+
+			x, y, z = Chunk.getBlockPositionInChunk(x, y, z)
+
+			local success = chunk:InsertBlock(block, x, y, z)
+
+			if not success then
+				table.remove(queue.container, index)
+			end
+		end
+
+		WorldManager.BulkAdded:Fire(queue.container)
+	end)
+
+	return bulkImport
+end
+
 function WorldManager:Insert(block: Block)
 	local x, y, z = block:GetPosition()
 
-	if self:IsBlockExist(x, y, z) then -- what the hell is this thing... (just checking this position)
+	if self:IsBlockExist(x, y, z) then
 		return
 	end
 
 	local cx, cy = Chunk.getChunkPositionFromBlock(x, z)
 
 	local chunk = self:GetChunk(cx, cy)
+
+	if chunk == nil then
+		return
+	end
 
 	x, y, z = Chunk.getBlockPositionInChunk(x, y, z)
 
@@ -156,6 +221,10 @@ function WorldManager:Delete(x: number, y: number, z: number)
 	local cx, cy = Chunk.getChunkPositionFromBlock(x, z)
 
 	local chunk = self:GetChunk(cx, cy)
+
+	if chunk == nil then
+		return
+	end
 
 	x, y, z = Chunk.getBlockPositionInChunk(x, y, z)
 
@@ -199,15 +268,133 @@ function WorldManager:GetNeighbors(x: number, y: number, z: number): { [Vector3]
 	return neighbors
 end
 
+function WorldManager:LocalRaycastV2(
+	origin: Vector3,
+	direction: Vector3,
+	range: number
+): { Block: Block.IBlock?, Normal: Vector3 }?
+	local params = RaycastParams.new()
+
+	params.FilterDescendantsInstances = { workspace:FindFirstChild("RenderFolder"):GetChildren() }
+	params.FilterType = Enum.RaycastFilterType.Include
+
+	local raycastResult = workspace:Raycast(origin, direction * range, params)
+
+	if raycastResult and raycastResult.Instance then
+		local position: Vector3 = raycastResult.Instance.Position / 3
+		local normal = raycastResult.Normal
+
+		local block = WorldManager:GetBlock(position.X, position.Y, position.Z)
+
+		return {
+			Block = block,
+			Normal = normal,
+		}
+	end
+
+	return
+end
+
+--[[function WorldManager:LocalRaycastV1(
+	origin: Vector3,
+	direction: Vector3,
+	range: number,
+	listId: { number }?,
+	isWhiteList: boolean?
+): { Block: Block.IBlock, Distance: number }?
+	listId = listId or {}
+
+	local DEBUG = RunService:IsStudio()
+
+	local epsilon = 1e-8
+
+	local tileX, tileY, tileZ = math.floor(origin.X), math.floor(origin.Y), math.floor(origin.Z)
+
+	local function step(dir: number)
+		local bound = 0
+
+		if dir ~= 0 then
+			bound = dir > 0 and 1 or -1
+		end
+
+		return bound
+	end
+
+	local stepX = step(direction.X)
+	local stepY = step(direction.Y)
+	local stepZ = step(direction.Z)
+
+	print(stepX, stepY, stepZ)
+
+	-- Calcul de la distance jusqu'à la prochaine frontière de tuile
+	local next_boundaryX = (direction.X > 0 and (tileX + 1) or tileX) - origin.X
+	local next_boundaryY = (direction.Y > 0 and (tileY + 1) or tileY) - origin.Y
+	local next_boundaryZ = (direction.Z > 0 and (tileZ + 1) or tileZ) - origin.Z
+
+	-- Calcul de tMax pour chaque axe
+	local tMaxX = (direction.X ~= 0) and (next_boundaryX / direction.X) or math.huge
+	local tMaxY = (direction.Y ~= 0) and (next_boundaryY / direction.Y) or math.huge
+	local tMaxZ = (direction.Z ~= 0) and (next_boundaryZ / direction.Z) or math.huge
+
+	-- Calcul de tDelta : distance à parcourir sur chaque axe pour passer une tuile
+	local tDeltaX = (direction.X ~= 0) and math.abs(1 / direction.X) or math.huge
+	local tDeltaY = (direction.Y ~= 0) and math.abs(1 / direction.Y) or math.huge
+	local tDeltaZ = (direction.Z ~= 0) and math.abs(1 / direction.Z) or math.huge
+
+	local distanceTravelled = 0
+
+	local function createPart(x: number, y: number, z: number)
+		local part = Instance.new("Part")
+
+		part.Size = Vector3.one * 3
+		part.Position = Vector3.new(x, y, z) * 3
+		part.Transparency = 0.7
+		part.Material = Enum.Material.Neon
+
+		part.Anchored = true
+		part.Parent = workspace
+		part.CanCollide = false
+		part.CanQuery = false
+
+		Debris:AddItem(part, 5)
+	end
+
+	while distanceTravelled < range do
+		local block = WorldManager:GetBlock(tileX, tileY, tileZ)
+
+		if block then
+			return { Block = block, Distance = distanceTravelled }
+		end
+
+		if DEBUG then
+			createPart(tileX, tileY, tileZ)
+		end
+
+		if tMaxX + epsilon < tMaxY and tMaxX + epsilon < tMaxZ then
+			tileX += stepX
+			distanceTravelled = tMaxX
+			tMaxX += tDeltaX
+		elseif tMaxY + epsilon < tMaxZ then
+			tileY += stepY
+			distanceTravelled = tMaxY
+			tMaxY += tDeltaY
+		else
+			tileZ += stepZ
+			distanceTravelled = tMaxZ
+			tMaxZ += tDeltaZ
+		end
+	end
+
+	return
+end]]
+
 function WorldManager:GetAmountOfBlocks(): number
 	local sum = 0
 
 	local chunks = WorldManager:GetChunks()
 
-	for _, row in chunks do
-		for _, c in row do
-			sum += c:GetAmountOfBlock()
-		end
+	for _, chunk in chunks do
+		sum += chunk:GetAmountOfBlock()
 	end
 
 	return sum
@@ -215,35 +402,36 @@ end
 
 -- [DATA DECOMPRESSION/COMPRESSION] --
 --
-function WorldManager:DecompressChunks(compressedChunks: { [string]: { [string]: { chunk: buffer, entity: {} } } })
-	local chunks: { [string]: { [string]: buffer } } = self.Container.Chunks
+function WorldManager:DecompressChunks(compressedChunks: { DatabaseManager.chunk })
+	local chunks: { { Chunk.Chunk } } = self.Container.Chunks
 
-	for cx: string, rows in compressedChunks do
-		for cy: string, chunk in rows do
-			--task.wait(ExecutionTimer:GetDeltaTime() * 10)
+	for _, chunk in compressedChunks do
+		local cx, cy = chunk.cx, chunk.cy
 
-			chunks[cx] = chunks[cx] or {}
+		chunks[cx] = chunks[cx] or {}
 
-			chunk = Chunk.new(tonumber(cx) :: number, tonumber(cy) :: number, chunk.chunk, chunk.entity)
+		chunk = Chunk.new(cx, cy, chunk.chunk, chunk.tileEntities)
 
-			chunks[cx][cy] = chunk
-		end
+		chunks[cx][cy] = chunk
 	end
 end
 
-function WorldManager:GetCompressedChunks()
-	local compressedChunk: { { { chunk: buffer, entity: {} } } } = {}
+function WorldManager:GetCompressedChunks(): { DatabaseManager.chunk }
+	local compressedChunk = {}
 
-	for cx, rows in self:GetChunks() do
-		for cy, chunk in rows do
-			--task.wait(ExecutionTimer:GetDeltaTime() * 10)
+	for _, chunk in self:GetChunks() :: { { Chunk.Chunk } } do
+		--task.wait(ExecutionTimer:GetDeltaTime() * 10)
 
-			compressedChunk[cx] = compressedChunk[cx] or {}
-
-			compressedChunk[cx][cy] = { chunk = chunk:Compress(), entity = chunk.entity }
-
-			--print(compressedChunk[cx][cy])
+		if chunk:GetAmountOfBlock() == 0 then
+			continue
 		end
+
+		local cx, cy = chunk:GetPosition()
+
+		local formatChunk: DatabaseManager.chunk =
+			{ chunk = chunk:Compress(), tileEntities = chunk.entity, cx = cx, cy = cy }
+
+		table.insert(compressedChunk, formatChunk)
 	end
 
 	return compressedChunk
@@ -284,20 +472,18 @@ end
 
 function WorldManager:Save()
 	if self:IsPlayerIsland() and self.IsGenerated then
-		local data = self:GetIslandData()
+		local data: DatabaseManager.Island = self:GetIslandData()
 
 		local bufSizes = 0
 
-		for _, rows in data.Chunks do
-			for _, c in rows do
-				bufSizes += buffer.len(c.chunk)
-			end
+		for _, chunk in data.Chunks do
+			bufSizes += buffer.len(chunk.chunk)
 		end
 
 		warn("Total bytes saved:", HttpService:JSONEncode(data):len() .. " bytes encoded [base64 JSONEncode]")
 		warn("Total bytes saved:", bufSizes .. " bytes non encoded [base64 JSONEncode]")
 		warn("Total blocks saved:", WorldManager:GetAmountOfBlocks())
-		DataProviderManager:SaveIslandData(self:GetOwner().UserId, data)
+		DatabaseManager:SaveIslandData(self:GetOwner().UserId, data)
 	end
 end
 

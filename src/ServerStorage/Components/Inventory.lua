@@ -11,7 +11,7 @@ setmetatable(InventoryComponent, { __index = Component })
 function InventoryComponent:new(size: number): InventoryData
 	return {
 		Size = size or 1,
-		Items = {},
+		Items = table.create(size, {}),
 	}
 end
 
@@ -23,18 +23,22 @@ function InventoryComponent:GetSize(): number
 	return self.Container.Size
 end
 
-function InventoryComponent:SetItemAtIndex(item: Item.Item, index: number)
+function InventoryComponent:SetItemAtIndex(item: Item.Item?, index: number)
 	local items: {} = self.Container.Items
 
-	items[tostring(index)] = item:GetContainerData()
+	if item then
+		items[index] = item:GetContainerData()
+	else
+		items[index] = {}
+	end
 end
 
 function InventoryComponent:GetItemAtIndex(index: number): Item.Item?
 	local items: {} = self.Container.Items
 
-	local item = items[tostring(index)]
+	local item = items[index]
 
-	if item then
+	if item and item.ID ~= nil then
 		return Item:create(item) :: Item.Item
 	end
 
@@ -93,7 +97,7 @@ function InventoryComponent:InsertItem(item: Item.Item)
 end
 
 function InventoryComponent:Clear()
-	self.Container.Items = {}
+	self.Container.Items = table.create(self:GetSize(), {})
 end
 
 function InventoryComponent:IsEmpty(): boolean

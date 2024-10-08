@@ -26,6 +26,10 @@ function FacingComponent:SetFacing(facing: Facing)
 	self.Container = table.find(Facings, facing)
 end
 
+function FacingComponent:getFacingID(facing: Facing)
+	return table.find(Facings, facing)
+end
+
 export type FacingComponent = typeof(FacingComponent)
 
 return FacingComponent

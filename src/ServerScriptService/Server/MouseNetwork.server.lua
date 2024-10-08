@@ -1,20 +1,91 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
-local Raycast = require(ReplicatedStorage.Utils.MouseRaycast)
-local MouseNetwork = require(ReplicatedStorage.Networks.MouseNetwork)
-local InventoryManager = require(ServerStorage.Managers.InventoryManager)
+local BlockContent = require(ReplicatedStorage.Classes.BlockContent)
+local BlockItemContent = require(ReplicatedStorage.Classes.BlockItemContent)
+local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
+local InventoryNetwork = require(ReplicatedStorage.Networks.InventoryNetwork)
 local WorldManager = require(ServerStorage.Managers.WorldManager)
---local Item = require(ServerStorage.Classes.Item)
 local Block = require(ServerStorage.Classes.Block)
-
-local MouseRay = MouseNetwork.MouseRay:Server()
+local PlayerInventoryGetter = require(ServerStorage.Managers.PlayerInventoryGetter)
 
 local function verifyDistance(raycastResult: RaycastResult, character: Model & { HumanoidRootPart: Part }): boolean
 	return (raycastResult.Position - character.HumanoidRootPart.Position).Magnitude < 30
 end
 
---TODO: demain tu refactoring tout ça pd, t'es vraiment un golmond connard!
+InventoryNetwork.SelectSlot.listen(function(slot: number, player: Player): nil
+	local character = player.Character or player.CharacterAdded:Wait()
+
+	local inventory = PlayerInventoryGetter.getInventory(player)
+
+	local item
+
+	if slot ~= 0 then
+		item = inventory:GetItemAtIndex(slot + 3 * 9)
+	end
+
+	local tool = character:FindFirstChildOfClass("Tool")
+
+	if tool then
+		tool:Destroy()
+		tool = nil
+	end
+
+	if item then
+		local content = item:GetContent()
+
+		tool = content:GetTool()
+
+		tool.Parent = character
+	end
+
+	return
+end)
+
+InventoryNetwork.MouseInteraction.listen(
+	function(data: { direction: Vector3, origin: Vector3, selectedSlot: number }, player: Player)
+		local result = WorldManager:LocalRaycastV2(data.origin, data.direction, 100)
+		local selectedSlot = data.selectedSlot
+
+		if result and result.Block and selectedSlot ~= 0 then
+			local block = result.Block
+			local inventory = PlayerInventoryGetter.getInventory(player)
+
+			local item = inventory:GetItemAtIndex(selectedSlot + 3 * 9)
+
+			if item == nil then
+				return
+			end
+
+			local content = item:GetContent()
+
+			if not content:IsUsable() then
+				return
+			end
+
+			--print(item, content:IsUsable(), content:IsA("BlockItem"), content:IsA("Tool"))
+
+			if content:IsA("BlockItem") then
+				local blockContent: BlockContent.BlockContent = content:GetBlock()
+
+				local position = Vector3.new(block:GetPosition()) + result.Normal
+
+				local newBlock = Block.new(blockContent:GetID()):SetPosition(position.X, position.Y, position.Z)
+
+				WorldManager:Insert(newBlock)
+
+				return
+			end
+
+			if content:IsA("Tool") then
+				WorldManager:Delete(block:GetPosition())
+
+				return
+			end
+		end
+	end
+)
+
 --[[MouseRay:On(function(player: Player, ray: Ray)
 	local raycastResult = Raycast.Raycast(ray, 500, player.Character:GetChildren())
 

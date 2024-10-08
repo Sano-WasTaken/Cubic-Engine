@@ -19,6 +19,8 @@ end
 
 setBar(0, "Chunks Decompression...")
 
+task.wait(2)
+
 local LoadingScreenNetwork = require(ReplicatedStorage:WaitForChild("Networks").LoadingScreenNetwork)
 
 LoadingScreenNetwork.IncrementLoadingBar.listen(function(data)

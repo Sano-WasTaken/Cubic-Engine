@@ -2,14 +2,11 @@ local ServerStorage = game:GetService("ServerStorage")
 --local ReplicatedStorage = game:GetService("ReplicatedStorage")
 --local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
+--local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 local DataProviderManager = require(ServerStorage.Managers.DatabaseManager)
 local WorldManager = require(ServerStorage.Managers.WorldManager)
 local Block = require(ServerStorage.Classes.Block)
-local Item = require(ServerStorage.Components.Item)
-local Chest = require(ServerStorage.Contents.TileEntities.Chest)
 --local BlockDataProvider = require(ReplicatedStorage.Providers.BlockDataProvider)
 
 local player = Players.PlayerAdded:Wait()
@@ -35,6 +32,8 @@ for _, _player in Players:GetPlayers() do
 end
 
 --WorldManager:Delete(0, 2, 0)
+--WorldManager:Insert(Block.new(BlockEnum.Chest):SetPosition(0, 2, 0))
+
 --[[WorldManager:Insert(Block.new(BlockEnum.Chest):SetPosition(0, 2, 0))
 local block = WorldManager:GetBlock(0, 2, 0)
 
@@ -66,5 +65,9 @@ print("player loads")
 
 WorldManager:Delete(0, 7, 0)
 WorldManager:Insert(Block.new(4):SetPosition(0, 7, 0))
+
+--local result = WorldManager:Raycast(Vector3.new(0, 50, 0), Vector3.new(0, -1, 0), 50)
+
+--print(result)
 
 --WorldManager:Insert(Block.new(BlockEnum.Chest):SetPosition(0, 2, 0))

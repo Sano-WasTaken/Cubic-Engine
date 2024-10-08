@@ -1,4 +1,8 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local RunService = game:GetService("RunService")
+
+local Signal = require(ReplicatedStorage.Packages.Signal)
 local Waiter = {}
 
 local function new()
@@ -7,6 +11,7 @@ local function new()
 		Divider = 1,
 		ExecutionTime = 0.1,
 		MaxDuration = 0,
+		Updated = Signal.new(),
 	}, { __index = Waiter })
 end
 
@@ -15,6 +20,7 @@ export type Waiter = typeof(Waiter) & {
 	Divider: number,
 	ExecutionTime: number,
 	MaxDuration: number,
+	Updated: Signal.Signal<nil>,
 }
 
 function Waiter.Start(self: Waiter)
@@ -36,6 +42,8 @@ function Waiter.Update(self: Waiter)
 		self.MaxDuration = math.clamp(delta / self.Divider, 0, self.ExecutionTime)
 
 		self:Start()
+
+		self.Updated:Fire()
 	end
 end
 

@@ -36,6 +36,23 @@ local inew = Instance.new
 local cfanew = CFrame.Angles
 
 --// Functions
+local function getPartOrientation(block: WorldManager.Block): CFrame
+	local facing = block:GetFacing()
+	local CF: CFrame?
+
+	if facing == "NORTH" then
+		CF = cfanew(0, 0, 0)
+	elseif facing == "EAST" then
+		CF = cfanew(0, 3 * math.pi / 2, 0)
+	elseif facing == "SOUTH" then
+		CF = cfanew(0, math.pi, 0)
+	elseif facing == "WESt" then
+		CF = cfanew(0, math.pi / 2, 0)
+	end
+
+	return CF :: CFrame
+end
+
 local function createBlock(id: number): Part?
 	local blockData = BlockDataProvider:GetData(id)
 
@@ -111,6 +128,8 @@ local function appendBlock(block: WorldManager.Block)
 		return
 	end
 
+	local angle = getPartOrientation(block)
+
 	local neighbors = WorldManager:GetNeighbors(x, y, z)
 
 	-- Block cull
@@ -137,7 +156,7 @@ local function appendBlock(block: WorldManager.Block)
 
 	local part = createBlock(id)
 
-	part.CFrame = cfnew(Vector3.new(x, y, z) * 3) -- * cfanew(rx, ry, rz)
+	part.CFrame = cfnew(Vector3.new(x, y, z) * 3) * angle
 	part.Parent = renderFolder
 
 	setBlock(x, y, z, part)
@@ -246,4 +265,5 @@ return {
 	setBlock = setBlock,
 	createBlock = createBlock,
 	createTexture = createTexture,
+	getPartOrientation = getPartOrientation,
 }

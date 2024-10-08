@@ -1,5 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local DraggingFrameController = require(script.Parent.DraggingFrameController)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 local Slot = require(ReplicatedStorage.UI.Components.Slot)
 local Text = require(ReplicatedStorage.UI.Components.Text)
 local BaseController = require(ReplicatedStorage.UI.Controllers.BaseController)
@@ -10,7 +13,10 @@ local children = Fusion.Children
 local Controller = {
 	Slots = {},
 	Inventory = {},
+	SelectedSlotChanged = Signal.new() :: Signal.Signal<number>,
 }
+
+DraggingFrameController:Init()
 
 Controller.CreateSlot = Slot
 Controller.CreateText = Text
@@ -59,7 +65,8 @@ function Controller.createSlots(self: Scope)
 						end
 
 						viewport = self:New("ViewportFrame")({
-							Transparency = 1,
+							Transparency = 0.9,
+							BackgroundColor3 = Color3.fromHex("575757"),
 							Size = UDim2.fromOffset(30, 30),
 							AnchorPoint = Vector2.new(0.5, 0.5),
 							Position = UDim2.fromScale(0.5, 0.5),
@@ -73,7 +80,7 @@ function Controller.createSlots(self: Scope)
 				self:Computed(function(use)
 					item = use(slotValue)
 
-					return item
+					return (item and item.ID ~= nil)
 							and self:CreateText({
 								Text = tostring(item.Amount or 1),
 								AnchorPoint = Vector2.new(1, 1),
@@ -102,7 +109,23 @@ end
 function Controller.SetSelectedSlot(self: Scope, slot: number)
 	assert(self.Instance ~= nil, "must init the UI before setting Selected Slot !")
 
-	self.SelectedSlot:set(slot)
+	if self:GetSelectedSlot() ~= slot then
+		self.SelectedSlot:set(slot)
+
+		self.SelectedSlotChanged:Fire(slot)
+	end
+end
+
+function Controller.GetItemIdInSelectedSlot(self: Scope): number?
+	assert(self.Instance ~= nil, "must init the UI before setting Selected Slot !")
+
+	local selectedSlot = self:GetSelectedSlot()
+
+	local slotvalue = self.Slots[selectedSlot + 3 * 9]
+
+	local item = self.peek(slotvalue)
+
+	return item and item.ID or nil
 end
 
 function Controller.Init(self: Scope, inventory: {})
@@ -156,7 +179,7 @@ function Controller.Update(self: Scope, inventory: { [string]: any })
 	end
 
 	for i, _ in oldInv do
-		if inventory[i] == nil then
+		if areTheSame(inventory[i], {}) then
 			local slot = self.Slots[tonumber(i)]
 
 			if slot then
