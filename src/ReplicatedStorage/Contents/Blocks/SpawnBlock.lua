@@ -1,13 +1,11 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local BlockContent = require(ReplicatedStorage.Classes.BlockContent)
-local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 
-local SpawnBlock = {
-	Id = BlockEnum.SpawnBlock,
-	Textures = "rbxassetid://18724299526",
-	Unbreakable = true,
-}
+local Block = require(ReplicatedStorage.Classes.Block)
 
-SpawnBlock = BlockContent.Class:extends(SpawnBlock)
-
-return SpawnBlock
+return Block:declareNewBlockClass({
+	ClassName = "Spawn_Block",
+	InstanceProperties = { Textures = "rbxassetid://18724299526" },
+	OtherProperties = {
+		Unbreakable = true,
+	},
+})

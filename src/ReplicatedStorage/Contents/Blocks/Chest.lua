@@ -1,20 +1,16 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local BlockContent = require(ReplicatedStorage.Classes.BlockContent)
-local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 
-return BlockContent.Class:extends({
-	Id = BlockEnum["Chest"],
-	Mesh = ReplicatedStorage.Meshes["Chest"],
-	Culled = false,
-	Transparency = 1,
-	Faced = true,
-	Textures = "",
-	--[[Textures = {
-		Top = "rbxassetid://110625559796607",
-		Bottom = "rbxassetid://110625559796607",
-		Front = "rbxassetid://122678938631292",
-		Back = "rbxassetid://110625559796607",
-		Right = "rbxassetid://110625559796607",
-		Left = "rbxassetid://110625559796607",
-	}, -- "rbxassetid://122678938631292"]]
+local Block = require(ReplicatedStorage.Classes.Block)
+
+local chest = Block:declareNewBlockClass({
+	ClassName = "Chest",
+	SavedProperties = { facing = true },
+	OtherProperties = { Culled = false },
+	InstanceProperties = {
+		Transparency = 1,
+		Mesh = ReplicatedStorage.Meshes["Chest"],
+		NoTexture = true,
+	},
 })
+
+return chest

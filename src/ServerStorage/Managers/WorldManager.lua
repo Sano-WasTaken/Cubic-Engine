@@ -11,6 +11,7 @@ local Block = require(ServerStorage.Classes.Block)
 local BulkImport = require(ServerStorage.Classes.BulkImport)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Chunk = require(ServerStorage.Classes.Chunk)
+local ChunkV2 = require(ServerStorage.Classes.ChunkV2)
 --local TileEntitiesManager = require(ServerStorage.Managers.TileEntitiesManager)
 local DataProviderManager = require(ServerStorage.Managers.DatabaseManager)
 
@@ -40,6 +41,8 @@ local WorldManager = {
 	ChunksGenerated = Signal.new() :: Signal.Signal<boolean>,
 	Decompressed = Signal.new() :: Signal.Signal<boolean>,
 }
+
+export type WorldManager = typeof(WorldManager)
 
 WorldManager.ChunksGenerated:Connect(function()
 	WorldManager.IsGenerated = true
@@ -92,7 +95,7 @@ function WorldManager:GetChunks(): { Chunk.Chunk }
 	return chunks
 end
 
-function WorldManager:GetChunk(cx: number, cy: number): Chunk.Chunk?
+function WorldManager.GetChunk(self: WorldManager, cx: number, cy: number): ChunkV2.ChunkInterface?
 	if WorldManager:IsChunkOut(cx, cy) then
 		return
 	end
@@ -101,40 +104,14 @@ function WorldManager:GetChunk(cx: number, cy: number): Chunk.Chunk?
 
 	chunks[cx] = chunks[cx] or {}
 
-	local chunk = chunks[cx][cy]
-
-	if chunk == nil then
-		chunk = Chunk.new(cx, cy)
-		chunks[cx][cy] = chunk
-	end
-
-	-- [[ you can add other schematics for chunks like custom chunks data organizing. ]] --
-
-	if typeof(chunk.chunk) == "buffer" then
-		chunk = Chunk.new(cx, cy, chunk.buffer, chunk.entity)
-
-		chunks[cx][cy] = chunk
-	end
-
-	-- If you want to use JSON Encoding for the chunk
-	--[[if typeof(chunk) == "string" then 
-		chunk = Chunk.new(cx, cy, HttpService:JSONDecode(chunk))
-
-		chunks[tostring(cx)][tostring(cy)] = chunk
-	end]]
+	local chunk = chunks[cx][cy] or ChunkV2.new(cx, cy)
 
 	return chunk
 end
 
 -- [BLOCKS UTILS] --
 --
-function WorldManager:SwapId(block: Block, id: number)
-	block:_setId(id)
-	self.BlockRemoved:Fire(block)
-	self.BlockAdded:Fire(block)
-end
-
-function WorldManager:GetBlock(x: number, y: number, z: number): Block.IBlock?
+function WorldManager:GetBlock(x: number, y: number, z: number)
 	local cx, cy = Chunk.getChunkPositionFromBlock(x, z)
 
 	local chunk = self:GetChunk(cx, cy)

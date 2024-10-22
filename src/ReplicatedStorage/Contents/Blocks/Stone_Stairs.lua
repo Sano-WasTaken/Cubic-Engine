@@ -1,12 +1,18 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local BlockContent = require(ReplicatedStorage.Classes.BlockContent)
-local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 
-return BlockContent.Class:extends({
-	Id = BlockEnum.Stone_Stairs,
-	Culled = false,
-	Faced = true,
-	Inverted = true,
-	Mesh = ReplicatedStorage.Meshes["Stairs"],
-	Textures = "rbxassetid://18640418536",
+local Block = require(ReplicatedStorage.Classes.Block)
+
+return Block:declareNewBlockClass({
+	ClassName = "Stone_Stairs",
+	SavedProperties = {
+		facing = true,
+		invert = true,
+	},
+	OtherProperties = {
+		Culled = false,
+	},
+	InstanceProperties = {
+		Mesh = ReplicatedStorage.Meshes["Stairs"],
+		Textures = "rbxassetid://18640418536",
+	},
 })
