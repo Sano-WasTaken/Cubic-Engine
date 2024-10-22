@@ -23,9 +23,8 @@ local function AppendContents(module: ModuleScript)
 	end
 end
 
-for _, name in BlockEnum do
+for name, _ in BlockEnum do
 	local itemID = ItemEnum[name]
-
 	if itemID then
 		local blockItem = BlockItemContent:extends({ Id = itemID })
 

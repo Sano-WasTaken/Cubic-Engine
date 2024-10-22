@@ -41,13 +41,14 @@ function ItemComponent:MergeItem(item: Item): Item? | false
 		item:SetAmount(amount)
 
 		if amount ~= 0 then
+			print(self, item)
 			return item
 		end
 
 		return nil
 	end
 
-	return false
+	return item
 end
 
 function ItemComponent:SetID(id: number)
@@ -67,6 +68,10 @@ function ItemComponent:SetAmount(amount: number): Item
 
 	if content.MaxStackSize >= amount then
 		self.Container.Amount = amount
+	end
+
+	if self.Container.Amount < 0 then
+		table.clear(self.Container)
 	end
 
 	return self

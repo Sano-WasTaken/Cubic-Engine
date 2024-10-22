@@ -6,7 +6,7 @@ local ItemEnum = require(ReplicatedStorage.Enums.ItemEnum)
 
 local BlockItemContent = ItemContent.Class:extends({
 	ClassName = "BlockItem",
-	Mesh = Instance.new("Part"),
+	--Mesh = Instance.new("Part"),
 })
 
 export type BlockItemContent =
@@ -20,13 +20,16 @@ end
 function BlockItemContent:GetClonedMesh(): Part
 	local block = self:GetBlock()
 
-	local clone: Part = self.Mesh:Clone()
+	local clone: Part = block:GetMeshClone()
 
-	clone.Size = Vector3.one * 3
-	clone.Material = block.Material or Enum.Material.Plaster
-	clone.Color = block.Color or Color3.new(1, 1, 1)
+	clone.Anchored = false
+	clone.Position = Vector3.zero
 
 	local textures = block:GetTexture()
+
+	if textures == "" then
+		return clone
+	end
 
 	for _, normalId in Enum.NormalId:GetEnumItems() do
 		local texture = Instance.new("Texture")

@@ -8,9 +8,9 @@ local cmd: CmdrUtils.CMD = {
 	Group = "Admin",
 	Args = {
 		{
-			Type = "number",
-			Name = "id",
-			Description = "The provided item id.",
+			Type = "items",
+			Name = "name",
+			Description = "The provided item name.",
 		},
 		{
 			Type = "number",

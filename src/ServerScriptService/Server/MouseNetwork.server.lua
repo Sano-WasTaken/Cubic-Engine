@@ -63,21 +63,38 @@ InventoryNetwork.MouseInteraction.listen(
 				return
 			end
 
-			--print(item, content:IsUsable(), content:IsA("BlockItem"), content:IsA("Tool"))
-
 			if content:IsA("BlockItem") then
 				local blockContent: BlockContent.BlockContent = content:GetBlock()
 
-				local position = Vector3.new(block:GetPosition()) + result.Normal
+				local position = (Vector3.new(block:GetPosition()) + result.Normal)
 
 				local newBlock = Block.new(blockContent:GetID()):SetPosition(position.X, position.Y, position.Z)
 
+				newBlock:SetFacing(result.Facing)
+				print(result.Inverted)
+				newBlock:SetInverted(result.Inverted)
+
+				inventory:IncrementItem(selectedSlot + 3 * 9, -1)
+
 				WorldManager:Insert(newBlock)
+
+				InventoryNetwork.SendInventory.sendToClient(player, inventory:GetItems())
 
 				return
 			end
 
 			if content:IsA("Tool") then
+				local bcontent = block:GetContent()
+
+				if bcontent:IsUnbreakable() then
+					return
+				end
+
+				if bcontent then
+					inventory:BulkInsert(bcontent:GetLootTable())
+					InventoryNetwork.SendInventory.sendToClient(player, inventory:GetItems())
+				end
+
 				WorldManager:Delete(block:GetPosition())
 
 				return

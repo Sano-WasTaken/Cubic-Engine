@@ -17,7 +17,14 @@ local function GetMesh(id: number): ((BasePart | Model)?, Camera?)
 
 	if data:IsA("BlockItem") then
 		itemMesh = data:GetClonedMesh()
-		itemMesh.CFrame = CFrame.new(Vector3.zero)
+
+		for _, children in itemMesh:GetChildren() do
+			if children:IsA("BasePart") then
+				children.Position = Vector3.zero
+			end
+		end
+
+		itemMesh.Position = Vector3.zero
 
 		camera.CFrame = CFrame.lookAt(Vector3.new(1, 0.35, 1) * 3.5, Vector3.new(0, -0.1, 0))
 	else

@@ -1,10 +1,15 @@
-local function new(enumerator: { string })
+local function new<T>(enumerator: T & {}): T
 	--local inverse = {}
-	return setmetatable(enumerator, {
-		__index = function(_: {}, k: any)
-			return table.find(enumerator, k)
-		end,
-	})
+
+	local inverse = {}
+
+	for name, id in enumerator :: {} do
+		inverse[id] = name
+	end
+
+	return setmetatable(enumerator :: {}, {
+		__index = inverse,
+	}) :: any
 end
 
 return {

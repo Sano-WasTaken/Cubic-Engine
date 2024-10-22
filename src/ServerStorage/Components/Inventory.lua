@@ -45,6 +45,18 @@ function InventoryComponent:GetItemAtIndex(index: number): Item.Item?
 	return nil
 end
 
+function InventoryComponent:IncrementItem(index: number, increment: number)
+	local item: Item.Item? = self:GetItemAtIndex(index)
+
+	if item then
+		item:SetAmount(item:GetAmount() + increment)
+
+		if item:GetAmount() == 0 then
+			self:SetItemAtIndex(nil, index)
+		end
+	end
+end
+
 -- give an interger of the first empty slot.
 function InventoryComponent:GetFirstEmptySlot(): number
 	local slot = 0
@@ -74,6 +86,12 @@ function InventoryComponent:GetFirstSlotWithItemID(id: number): number
 	end
 
 	return slot
+end
+
+function InventoryComponent:BulkInsert(items: { Item.Item })
+	for _, item in items do
+		self:InsertItem(Item:create(item))
+	end
 end
 
 function InventoryComponent:InsertItem(item: Item.Item)

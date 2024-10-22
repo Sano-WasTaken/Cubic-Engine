@@ -1,6 +1,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local BlockTypeEnum = require(ReplicatedStorage.Enums.BlockTypeEnum)
 local RunService = game:GetService("RunService")
+
+local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
+local ItemEnum = require(ReplicatedStorage.Enums.ItemEnum)
+local LootTable = require(script.Parent.LootTable)
 local Object = require(script.Parent.Object)
 
 -- To prevents server features are using in client context
@@ -12,10 +15,15 @@ export type CanvasBlock = {
 	Textures: Textures?,
 	Mesh: BasePart?,
 	Unbreakable: boolean?,
+	Transparency: number?,
 	BlockType: number?,
 	Color: Color3?,
-	Size: Vector3?,
 	ClassName: string?,
+	Material: Enum.Material?,
+	Culled: boolean?,
+
+	Faced: boolean?,
+	Inverted: boolean?,
 }
 
 local baseMesh = Instance.new("Part")
@@ -26,9 +34,13 @@ local BlockContent = {
 	Textures = "rbxassetid://18945254631",
 	Mesh = baseMesh,
 	Unbreakable = false,
-	BlockType = BlockTypeEnum.Block,
+	Culled = true,
+	Faced = false,
+	Inverted = false,
+	Transparency = 0,
+	Material = Enum.Material.Plastic,
 	ClassName = "Block",
-	Size = Vector3.one * 3,
+	Color = Color3.new(1, 1, 1),
 }
 
 setmetatable(BlockContent, { __index = Object })
@@ -50,19 +62,31 @@ end
 function BlockContent:GetMeshClone(): BasePart
 	local mesh: BasePart = self.Mesh:Clone()
 
-	mesh.Size = self.Size
+	mesh.Size = Vector3.one * 3
 	mesh.Anchored = true
+	mesh.Material = self.Material
+	mesh.Transparency = self.Transparency
+	mesh.Color = self.Color
+	mesh.Name = tostring(self.Id)
 
 	return mesh
+end
+
+function BlockContent:IsCulled(): boolean
+	return self.Culled
 end
 
 function BlockContent:IsUnbreakable()
 	return self.Unbreakable
 end
 
-function BlockContent:GetLootTable() end
+function BlockContent:GetLootTable(): { { ID: number, Amount: number } }
+	local lootTable = self.LootTable or LootTable.new():SetItem({ id = ItemEnum[BlockEnum[self:GetID()]] })
 
-function BlockContent:SetLootTable() end
+	return lootTable:CalculateItems()
+end
+
+--function BlockContent:SetLootTable() end
 
 function BlockContent:extends(class: CanvasBlock)
 	return setmetatable(class, { __index = self })

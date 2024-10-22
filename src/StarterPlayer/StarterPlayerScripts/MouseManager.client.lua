@@ -3,9 +3,9 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
-local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
 local AnimationController = require(ReplicatedStorage.Modules.AnimationController)
 local InventoryNetwork = require(ReplicatedStorage.Networks.InventoryNetwork)
+local BlockDataProvider = require(ReplicatedStorage.Providers.BlockDataProvider)
 local ItemDataProvider = require(ReplicatedStorage.Providers.ItemDataProvider)
 local BlockLifeBarController = require(ReplicatedStorage.UI.Controllers.BlockLifeBarController)
 local HotbarController = require(ReplicatedStorage.UI.Controllers.HotbarController)
@@ -15,10 +15,21 @@ local player = Players.LocalPlayer
 
 local mouse = player:GetMouse()
 
-local highlight = Raycast.CreateHighlight()
+local selectionBox = Raycast.CreateSelectionBox()
 BlockLifeBarController:Init()
 
 local transparency = 0
+
+local part = Instance.new("Part")
+
+part.Size = Vector3.one / 4
+part.Shape = Enum.PartType.Ball
+part.BrickColor = BrickColor.Red()
+part.Material = Enum.Material.Neon
+part.CanCollide = false
+part.CanQuery = false
+
+local DEBUG = RunService:IsStudio()
 
 RunService.RenderStepped:Connect(function()
 	if player.Character == nil then
@@ -32,38 +43,56 @@ RunService.RenderStepped:Connect(function()
 	if raycastResult and raycastResult.Instance then
 		local instance = raycastResult.Instance :: Part
 
-		if highlight.Parent then
-			highlight.Parent.Transparency = transparency
+		if DEBUG then
+			part.Parent = workspace
+			part.Position = raycastResult.Position
 		end
 
-		highlight.Parent = instance
-		highlight.Adornee = instance
+		if selectionBox.Parent then
+			selectionBox.Parent.Transparency = transparency
+		end
+
+		selectionBox.Parent = instance
+		selectionBox.Adornee = instance
 
 		transparency = instance.Transparency
 
 		instance.Transparency = instance.Transparency > 0 and instance.Transparency or 0
 	else
-		if highlight.Parent then
-			highlight.Parent.Transparency = transparency
+		if selectionBox.Parent then
+			selectionBox.Parent.Transparency = transparency
 		end
 
-		highlight.Parent = nil
-		highlight.Adornee = nil
+		part.Parent = nil
+		selectionBox.Parent = nil
+		selectionBox.Adornee = nil
 	end
 end)
 
 local function Interact(id): (boolean, boolean?)
 	local itemContent = ItemDataProvider:GetData(id)
+	local blockContent = BlockDataProvider:GetData(selectionBox.Parent and tonumber(selectionBox.Parent.Name) or 0)
 
 	local isUsable = itemContent:IsUsable()
+
+	local delta = UserInputService:GetMouseDelta().Magnitude
+
+	if UserInputService.TouchEnabled and not (delta < 0.1 and delta > -0.1) then
+		return false
+	end
 
 	if not isUsable then
 		return false
 	end
 
 	if itemContent:IsA("BlockItem") then
-		print(BlockEnum[id])
+		AnimationController:Animate("Swing", itemContent)
+
 		return true, false
+	end
+
+	if blockContent == nil or blockContent:IsUnbreakable() then
+		return false
 	end
 
 	if not itemContent:IsA("Tool") then
@@ -77,15 +106,10 @@ local function Interact(id): (boolean, boolean?)
 	local speed = itemContent.Speed
 
 	AnimationController:Animate("Swing", itemContent)
-
-	--track.Looped = true
-	--track:AdjustSpeed(speed ~= 0 and speed or 0.5)
-
-	--track:Play()
 	BlockLifeBarController:Set(1)
-	BlockLifeBarController:Adornee(highlight.Adornee)
+	BlockLifeBarController:Adornee(selectionBox.Adornee)
 
-	highlight:GetPropertyChangedSignal("Adornee"):Connect(function()
+	local connection = selectionBox:GetPropertyChangedSignal("Adornee"):Connect(function()
 		stop = true
 	end)
 
@@ -93,25 +117,26 @@ local function Interact(id): (boolean, boolean?)
 		task.wait()
 
 		local mouseButtonDown = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+		--or UserInputService.TouchEnabled
+
+		--print(UserInputService.TouchEnabled)
 
 		if not mouseButtonDown then
 			BlockLifeBarController:Adornee()
-			--track:Stop()
 			AnimationController:Stop("Swing")
+			connection:Disconnect()
 			return false
 		end
 
 		if stop and mouseButtonDown then
 			id = HotbarController:GetItemIdInSelectedSlot()
-
+			connection:Disconnect()
 			if id then
 				BlockLifeBarController:Adornee()
 				AnimationController:Stop("Swing")
-				--track:Stop()
 
 				return Interact(id)
 			end
-			--track:Stop()
 
 			return false
 		end
@@ -126,7 +151,16 @@ local function Interact(id): (boolean, boolean?)
 
 	AnimationController:Stop("Swing")
 	BlockLifeBarController:Adornee()
-	--track:Stop()
+
+	local part = selectionBox.Adornee
+
+	connection:Disconnect()
+
+	if part then
+		selectionBox.Parent = nil
+		part:Destroy()
+		selectionBox.Adornee = nil
+	end
 
 	return true, true
 end
@@ -135,15 +169,9 @@ local function Use(id: number?)
 	local selectedSlot = HotbarController:GetSelectedSlot()
 	id = id or HotbarController:GetItemIdInSelectedSlot()
 
-	--local itemContent = ItemDataProvider:GetData(id :: number)
-
 	if selectedSlot == 0 or id == nil then
 		return
 	end
-
-	--local track: AnimationTrack = itemContent:Animate()
-
-	--task.spawn(Animate, track, track.Length / itemContent.Speed)
 
 	local success, canBeReUse = Interact(id)
 
@@ -162,7 +190,7 @@ local function Use(id: number?)
 	if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) and canBeReUse then
 		id = HotbarController:GetItemIdInSelectedSlot()
 
-		task.wait(0.1)
+		task.wait()
 
 		Use(id)
 	end
@@ -173,11 +201,25 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessedEv
 		return
 	end
 
-	if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessedEvent then
-		if #player.PlayerGui:GetGuiObjectsAtPosition(mouse.X, mouse.Y) ~= 0 then
+	if
+		(input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch)
+		and not gameProcessedEvent
+	then
+		if not UserInputService.TouchEnabled and #player.PlayerGui:GetGuiObjectsAtPosition(mouse.X, mouse.Y) ~= 0 then
 			return
 		end
-
 		Use()
 	end
+end)
+
+UserInputService.TouchStarted:Connect(function(a0: InputObject, a1: boolean)
+	print(a0, a1)
+end)
+
+UserInputService.TouchPan:Connect(function(...)
+	print(...)
+end)
+
+UserInputService.TouchEnded:Connect(function(a0: InputObject, a1: boolean)
+	print(a0, a1)
 end)

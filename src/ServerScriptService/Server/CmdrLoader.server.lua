@@ -20,6 +20,8 @@ Cmdr.Registry:RegisterHook("BeforeRun", function(context)
 	end
 end)
 
+Cmdr:RegisterTypesIn(ReplicatedStorage.Types)
+
 Cmdr.Registry:RegisterHook("AfterRun", function(context)
 	warn(context.Response)
 	return context.Response

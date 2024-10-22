@@ -34,10 +34,12 @@ local function createChunkBorder(cx: number, cy: number)
 		(cy * CHUNK_SIZE.Z * BLOCK_SIZE) - part.Size.Z / 2 - BLOCK_SIZE / 2
 	)
 
-	local highlight = Instance.new("SelectionBox")
+	local selectionBox = Instance.new("SelectionBox")
 
-	highlight.Adornee = part
-	highlight.Parent = part
+	selectionBox.Adornee = part
+	selectionBox.Parent = part
+	selectionBox.SurfaceTransparency = 0.9
+	selectionBox.SurfaceColor3 = Color3.fromRGB(255, 230, 0)
 
 	part.Transparency = 1 -- 0.95
 	part.Anchored = true
@@ -54,9 +56,9 @@ local function createChunkBorder(cx: number, cy: number)
 	borders[cx][cy] = part
 end
 
-InfoController:Init()
-
 if DEBUG then
+	InfoController:Init()
+
 	for i = -RANGE, RANGE do
 		for j = -RANGE, RANGE do
 			createChunkBorder(i, j)
@@ -65,7 +67,7 @@ if DEBUG then
 
 	local toggle = true
 
-	UserInputService.InputBegan:Connect(function(a0: InputObject, a1: boolean)
+	UserInputService.InputBegan:Connect(function(a0: InputObject, _: boolean)
 		if a0.KeyCode ~= Enum.KeyCode.B then
 			return
 		end
@@ -80,24 +82,24 @@ if DEBUG then
 
 		toggle = not toggle
 	end)
+
+	RunService.Heartbeat:Connect(function(_: number)
+		local character = Players.LocalPlayer.Character
+
+		if character == nil then
+			return
+		end
+
+		local HumanoidRootPart: Part = character:FindFirstChild("HumanoidRootPart")
+
+		if HumanoidRootPart == nil then
+			return
+		end
+
+		local posistion = HumanoidRootPart.Position
+
+		local cx, cy = getChunkFromPosition(posistion.X, posistion.Z)
+
+		InfoController:Set(cx, cy)
+	end)
 end
-
-RunService.Heartbeat:Connect(function(_: number)
-	local character = Players.LocalPlayer.Character
-
-	if character == nil then
-		return
-	end
-
-	local HumanoidRootPart: Part = character:FindFirstChild("HumanoidRootPart")
-
-	if HumanoidRootPart == nil then
-		return
-	end
-
-	local posistion = HumanoidRootPart.Position
-
-	local cx, cy = getChunkFromPosition(posistion.X, posistion.Z)
-
-	InfoController:Set(cx, cy)
-end)

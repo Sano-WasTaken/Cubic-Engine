@@ -55,8 +55,6 @@ function Controller.Update(self: Scope, inventory: { [string]: any })
 			end
 		end
 	end
-
-	print(self.Inventory)
 end
 
 local function createSlot(self: Scope, slotValue, index: number)
@@ -126,17 +124,18 @@ local function createSlot(self: Scope, slotValue, index: number)
 				DraggingFrameController:Set(item)
 				self.DraggedSlot:set(index)
 			else
-				DraggingFrameController:Set(nil)
-
-				local itemB = self.Inventory[draggedSlot]
 				local slotB = self.Slots[draggedSlot]
 
-				slotB:set(item)
-				slotValue:set(itemB)
+				if slotB then
+					DraggingFrameController:Set(nil)
 
-				InventoryNetwork.SwapItem.sendToServer({ chestID = nil, indexA = index, indexB = draggedSlot })
+					local itemB = self.Inventory[draggedSlot]
+					slotB:set(item)
+					slotValue:set(itemB)
+					InventoryNetwork.SwapItem.sendToServer({ chestID = nil, indexA = index, indexB = draggedSlot })
 
-				self.DraggedSlot:set(0)
+					self.DraggedSlot:set(0)
+				end
 			end
 		end,
 	})

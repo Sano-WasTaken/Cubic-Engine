@@ -40,10 +40,14 @@ function ItemContent:GetTool(): Tool
 	if self:IsA("BlockItem") then
 		local handle: Part = self:GetClonedMesh()
 
-		for _, texture in handle:GetChildren() do
-			if texture:IsA("Texture") then
-				texture.StudsPerTileU = 1.5
-				texture.StudsPerTileV = 1.5
+		for _, instance in handle:GetChildren() do
+			if instance:IsA("Texture") then
+				instance.StudsPerTileU = 1.5
+				instance.StudsPerTileV = 1.5
+			elseif instance:IsA("BasePart") then
+				instance.Size = instance.Size / 2
+				instance.Anchored = false
+				instance.CanCollide = false
 			end
 		end
 
@@ -59,6 +63,8 @@ function ItemContent:GetTool(): Tool
 
 		handle.Parent = tool
 	end
+
+	tool.CanBeDropped = false
 
 	return tool
 end

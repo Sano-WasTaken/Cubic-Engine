@@ -258,4 +258,7 @@ end
 
 return {
 	new = new,
+	bufferFunctions = functions,
+	bitBuffer = require(script.bitBuffer),
+	chunkBuffer = require(script.chunkBuffer),
 }

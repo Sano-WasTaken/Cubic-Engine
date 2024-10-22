@@ -10,7 +10,7 @@ function Controller.Animate(self: AnimationController, name: string, item: ItemC
 	local speed = item.Speed
 
 	if track then
-		track.Looped = true
+		track.Looped = false
 		track:AdjustSpeed(track.Length / speed)
 
 		track:Play()

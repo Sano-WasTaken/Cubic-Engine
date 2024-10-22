@@ -86,10 +86,6 @@ type Scope = typeof(scope)
 RunService.RenderStepped:Connect(function()
 	local mouse = UserInputService:GetMouseLocation()
 
-	if scope.peek(scope.ItemValue) == nil then
-		return
-	end
-
 	scope.Position:set(Vector2.new(mouse.X, mouse.Y))
 end)
 

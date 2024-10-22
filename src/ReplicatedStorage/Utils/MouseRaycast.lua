@@ -17,15 +17,14 @@ local function Raycast(ray: Ray, depth: number, exclude: { Instance } | Model): 
 	return workspace:Raycast(ray.Origin, ray.Direction * depth, params)
 end
 
-local function CreateHighlight(): Highlight
-	local ss = Instance.new("Highlight")
+local function CreateSelectionBox(): SelectionBox
+	local sb = Instance.new("SelectionBox")
 
-	ss.FillTransparency = 1
-	ss.OutlineTransparency = 0.3
-	ss.OutlineColor = Color3.new(0.262745, 0.262745, 0.262745)
-	ss.Enabled = true
+	sb.LineThickness = 0.005
+	sb.SurfaceTransparency = 1
+	sb.Color3 = Color3.new()
 
-	return ss
+	return sb
 end
 
 local function GetOverlap(Position: Vector3): boolean
@@ -52,6 +51,6 @@ end
 return {
 	GetRay = GetRay,
 	Raycast = Raycast,
-	CreateHighlight = CreateHighlight,
+	CreateSelectionBox = CreateSelectionBox,
 	GetOverlap = GetOverlap,
 }

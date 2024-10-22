@@ -3,22 +3,28 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 --local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Waiter = require(ReplicatedStorage.Classes.Waiter)
-local TileEntitiesManager = require(ServerStorage.Managers.TileEntitiesManager)
 local Block = require(script.Parent.Block)
+local TileEntitiesManager = require(ServerStorage.Managers.TileEntitiesManager)
 local TileEntity = require(script.Parent.TileEntity)
+local RLE = require(script.RLE)
 --local ExecutionTimer = require(ReplicatedStorage.Utils.ExecutionTimer)
 
 local Chunk = {}
 
 local CHUNK_SIZE = Vector3.new(16, 256, 16) -- 131072
-local OCCURENCE_SIZE = 2 ^ 16 -- 65536
 
-local bufcopy = buffer.copy
 local bufwriteu16 = buffer.writeu16
 local bufreadu16 = buffer.readu16
 
 local MaxChunks = 25
+
+local function booleanToNumber(value: boolean): number
+	return value and 1 or 0
+end
+
+local function numberToBoolean(invert: number): boolean
+	return invert == 1
+end
 
 local function getMaxCoordinate(): (number, number)
 	return -MaxChunks, MaxChunks
@@ -38,27 +44,6 @@ local function verify(x: number, y: number, z: number): boolean
 	return (x < CHUNK_SIZE.X and x >= 0 and y < CHUNK_SIZE.Y and y >= 0 and z < CHUNK_SIZE.Z and z >= 0)
 end
 
-local function writeOccurences(buf: buffer, id: number, occurences: number)
-	local len = buffer.len(buf)
-
-	local newBuf = buffer.create(len + 4)
-
-	bufcopy(newBuf, 0, buf, 0, len)
-
-	bufwriteu16(newBuf, len, id)
-	bufwriteu16(newBuf, len + 2, occurences)
-
-	return newBuf
-end
-
-local function getOccurences(buf: buffer, i: number)
-	local occ = bufreadu16(buf, i + 2)
-
-	occ = occ == 0 and OCCURENCE_SIZE or occ
-
-	return bufreadu16(buf, i), occ, 4
-end
-
 local function getPointerToCoordinates(x: number, y: number, z: number): number
 	local j = x + z * CHUNK_SIZE.X + y * (CHUNK_SIZE.X * CHUNK_SIZE.Z)
 
@@ -73,10 +58,33 @@ local function getCoordinatesFromPointer(pointer: number)
 	return x, y, z
 end
 
-local function new(x: number, y: number, buf: buffer?, entities: {}?)
+--[[BITWISE OP PACK & UNPACK STATES]]
+--
+local function packStates(inverted: boolean, facing: number, active: boolean)
+	return bit32.bor(
+		bit32.lshift(booleanToNumber(active), 3), -- Shift active state to the left by 3 bits
+		bit32.lshift(booleanToNumber(inverted), 2), -- Shift inverted state to the left by 2 bits
+		facing -- Add the facing state directly
+	)
+
+	-- comment by GPT
+end
+
+local function unpackStates(states: number): (boolean, number, boolean)
+	local active = bit32.band(bit32.rshift(states, 3), 1) -- Extract active state
+	local inverted = bit32.band(bit32.rshift(states, 2), 1) -- Extract inverted state
+	local facing = bit32.band(states, 3) -- Extract facing state
+
+	-- comment by GPT
+
+	return numberToBoolean(inverted), facing, numberToBoolean(active)
+end
+
+local function new(x: number, y: number, buf: buffer?, entities: {}?, states: buffer?)
 	local self = setmetatable({
 		buffer = buffer.create(CHUNK_SIZE.X * CHUNK_SIZE.Y * CHUNK_SIZE.Z * 2),
 		entity = entities or {},
+		states = states or buffer.create(CHUNK_SIZE.X * CHUNK_SIZE.Y * CHUNK_SIZE.Z),
 		--encoded = buf,
 		x = x,
 		y = y,
@@ -90,6 +98,16 @@ local function new(x: number, y: number, buf: buffer?, entities: {}?)
 	end
 
 	return self
+end
+
+function Chunk:_getStatesAtPointer(pointer: number): number
+	local facing = buffer.readu8(self.states, pointer)
+
+	return facing
+end
+
+function Chunk:_setStatesAtPointer(pointer: number, states: number)
+	buffer.writeu8(self.states, pointer, states)
 end
 
 function Chunk:_setBlockInPosition(pointer: number, id: number)
@@ -119,9 +137,9 @@ function Chunk:_getBlockIdAtPointer(pointer: number): number
 end
 
 function Chunk:_setEntity(entity: TileEntity.TileEntity)
-	local x, y, z = entity:GetPosition()
+	local pointer = entity:GetPosition()
 
-	if self:_getEntityFromPosition(x, y, z) == nil then
+	if self:_getEntityFromPosition(getCoordinatesFromPointer(pointer)) == nil then
 		table.insert(self.entity, entity:GetContainerData())
 	end
 end
@@ -137,14 +155,9 @@ function Chunk:_getEntityFromPosition(x: number, y: number, z: number): TileEnti
 
 	local fentity
 
-	x, z = x + (CHUNK_SIZE.X * self.x), z + (CHUNK_SIZE.Z * self.y)
-
-	for _, _entity: { ID: number } in self.entity do
-		local entity = TileEntitiesManager.Provider:GetData(_entity.ID):create(_entity)
-
-		local fx, fy, fz = entity:GetPosition()
-
-		if fx == x and fy == y and fz == z then
+	for _, _entity: { p: number } in self.entity do
+		if pointer == _entity.p then
+			local entity = TileEntitiesManager.Provider:GetData(id):create(_entity)
 			fentity = entity
 
 			break
@@ -163,14 +176,8 @@ function Chunk:_removeEntityFromPosition(x: number, y: number, z: number)
 		return
 	end
 
-	x, z = x + (CHUNK_SIZE.X * self.x), z + (CHUNK_SIZE.Z * self.y)
-
-	for i, _entity: { ID: number } in self.entity do
-		local entity = TileEntitiesManager.Provider:GetData(_entity.ID):create(_entity)
-
-		local fx, fy, fz = entity:GetPosition()
-
-		if fx == x and fy == y and fz == z then
+	for i, _entity: { p: number } in self.entity do
+		if _entity.p == pointer then
 			table.remove(self.entity, i)
 
 			break
@@ -185,12 +192,21 @@ end
 --[[
 x, y, z aren't the block position in the world -> position in chunk !
 ]]
-function Chunk:GetBlockAtPosition(x: number, y: number, z: number): Block.IBlock?
+function Chunk.GetBlockAtPosition(self: Chunk, x: number, y: number, z: number): Block.IBlock?
 	if not verify(x, y, z) then
 		return
 	end
 
+	local pointer = getPointerToCoordinates(x, y, z)
+
 	local block = self:_getBlockInPosition(x, y, z)
+	local states = self:_getStatesAtPointer(pointer)
+
+	local inverted, facing, active = unpackStates(states) -- active not use (DEFAULT VALUE IS false)
+
+	block.facing = facing
+	block.inverted = inverted
+	block.active = active
 
 	if block:GetID() == 0 then
 		block.entity = self:_getEntityFromPosition(x, y, z)
@@ -201,91 +217,46 @@ function Chunk:GetBlockAtPosition(x: number, y: number, z: number): Block.IBlock
 	return block
 end
 
--- new Fast Occurences Compression (see RLE encoding)
+-- new Fast Occurences Compression/Decompression (see RLE encoding)
 function Chunk:Compress()
-	local chunkBuffer = buffer.create(0)
-	local totalSize = CHUNK_SIZE.X * CHUNK_SIZE.Y * CHUNK_SIZE.Z
-
-	local pointer, localId, occurences = 0, -1, 0
-
-	local waiter = Waiter.new()
-
-	while pointer < totalSize do
-		local id = bufreadu16(self.buffer, pointer * 2) -- block and block:GetID() or 0 -- unusable [si quelqu'un passe par la kill me pls]
-
-		if id == localId then
-			occurences += 1
-		else
-			if localId ~= -1 then
-				chunkBuffer = writeOccurences(chunkBuffer, localId, occurences)
-				waiter:Update()
-			end
-			localId = id
-			occurences = 1
-		end
-
-		pointer += 1
-	end
-
-	chunkBuffer = writeOccurences(chunkBuffer, localId, occurences)
-
-	return chunkBuffer
+	local decodedChunk = RLE.encode(self.buffer, { idSize = 2, occurencesSize = 2, doWait = true })
+	return decodedChunk
 end
 
-function Chunk:_decompress(buffurizedChunk: buffer)
-	local totalSize = CHUNK_SIZE.X * CHUNK_SIZE.Y * CHUNK_SIZE.Z
+function Chunk:_decompress(encodedChunk: buffer)
+	local buf, amount = RLE.decode(
+		encodedChunk,
+		{ idSize = 2, occurencesSize = 2, doWait = true },
+		CHUNK_SIZE.X * CHUNK_SIZE.Y * CHUNK_SIZE.Z
+	)
 
-	local localPointer, occurences = 0, 0
-	local id, occ, len = 0, 0, 0
+	self.buffer = buf
 
-	local waiter = Waiter.new()
-
-	while totalSize > occurences do
-		id, occ, len = getOccurences(buffurizedChunk, localPointer)
-
-		if id ~= 0 then
-			waiter:Start()
-			for j = occurences, occurences + occ - 1 do
-				buffer.writeu16(self.buffer, j * 2, id)
-			end
-
-			waiter:Update()
-			self.amount += occ
-		end
-
-		occurences += occ
-
-		localPointer += len
-	end
+	self.amount = amount
 end
 
 --[[
 x, y, z aren't the block position in the world -> position in chunk !
 ]]
-function Chunk:InsertBlock(block: Block.IBlock, x: number, y: number, z: number): boolean
+function Chunk.InsertBlock(self: Chunk, block: Block.IBlock, x: number, y: number, z: number): boolean
 	if not verify(x, y, z) then
 		return false
 	end
 
 	local id = block:GetID()
+	local entity = block:GetEntity()
 
 	local pointer = getPointerToCoordinates(x, y, z)
 
-	local tileClass = TileEntitiesManager.Provider:GetData(id)
+	if entity then
+		entity:SetPosition(pointer)
 
-	-- tileEntity creation and initialisation
-	if tileClass then
-		local tile = tileClass:create()
-
-		x, z = x + (CHUNK_SIZE.X * self.x), z + (CHUNK_SIZE.Z * self.y)
-
-		tile:SetPosition(x, y, z)
-
-		self:_setEntity(tile)
-
-		print(self.entity)
+		self:_setEntity(entity)
 	end
 
+	local states = packStates(block.inverted, block.facing, block.active)
+
+	self:_setStatesAtPointer(pointer, states)
 	self:_setBlockInPosition(pointer, id)
 
 	self.amount += 1
@@ -293,12 +264,15 @@ function Chunk:InsertBlock(block: Block.IBlock, x: number, y: number, z: number)
 	return true
 end
 
-function Chunk:DeleteBlock(x: number, y: number, z: number)
+function Chunk.DeleteBlock(self: Chunk, x: number, y: number, z: number)
 	if not verify(x, y, z) then
 		return
 	end
 
 	self.amount -= 1
+
+	local pointer = getPointerToCoordinates(x, y, z)
+	self:_setStatesAtPointer(pointer, 0)
 
 	self:_removeEntityFromPosition(x, y, z)
 	self:_deleteBlockInPosition(x, y, z)
@@ -313,7 +287,9 @@ function Chunk:GetJSON()
 	return HttpService:JSONEncode(self.chunkPositions)
 end
 
-export type Chunk = typeof(Chunk)
+export type Chunk = typeof(Chunk) & {
+	amount: number,
+}
 
 return {
 	new = new,
@@ -321,6 +297,8 @@ return {
 	getBlockPositionInChunk = getBlockPositionInChunk,
 	getMaxCoordinate = getMaxCoordinate,
 	getCoordinatesFromPointer = getCoordinatesFromPointer,
+	getPointerToCoordinates = getPointerToCoordinates,
 	CHUNK_SIZE = CHUNK_SIZE,
 	ChunkBlockSize = CHUNK_SIZE.X * CHUNK_SIZE.Z * CHUNK_SIZE.Y,
+	Class = Chunk,
 }

@@ -1,3 +1,6 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Object = require(ReplicatedStorage.Classes.Object)
 local Component = require(script.Parent.Component)
 
 type ComponentF = {
@@ -13,7 +16,9 @@ local TileEntity = {
 	Components = {} :: { ComponentF },
 }
 
-export type TileEntity = typeof(TileEntity)
+setmetatable(TileEntity, { __index = Object })
+
+export type TileEntity = typeof(TileEntity) & typeof(Object)
 
 export type EntityContent = {}
 
@@ -32,7 +37,7 @@ end
 function TileEntity:GetComponent(name: string): Component.Component? -- i'm feeling seriously tired doing this.
 	local fComp
 
-	for index, comp: ComponentF in self.Components do
+	for index, comp: ComponentF in self.c do
 		if comp.Name == name then
 			local data: { any } = self.Container.Components[index]
 
@@ -61,11 +66,17 @@ end
 function TileEntity:create(data: { any }?)
 	assert(self.ClassName ~= "TileEntity", "cannot create TileEntity.")
 
+	local c
+
+	if data == nil then
+		c = createComps(self)
+	end
+
 	return setmetatable({
 		Container = data or { -- Single value or array !
-			ID = self.ID,
-			Position = { 0, 0, 0 }, -- Array !
-			Components = createComps(self), -- ARRRRRRRRRAAAAAYYYYY !!!!!!
+			--ID = self.ID,
+			p = 0,
+			c = #c ~= 0 and c or nil,
 		},
 	}, { __index = self })
 end
@@ -74,12 +85,12 @@ function TileEntity:GetContainerData(): {}
 	return self.Container
 end
 
-function TileEntity:SetPosition(x: number, y: number, z: number)
-	self.Container.Position = { x, y, z }
+function TileEntity:SetPosition(pointer: number)
+	self.Container.p = pointer
 end
 
-function TileEntity:GetPosition(): (number, number, number)
-	return unpack(self.Container.Position)
+function TileEntity:GetPosition(): number
+	return self.Container.p
 end
 
 -- Abstract Method

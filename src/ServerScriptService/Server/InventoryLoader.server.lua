@@ -35,6 +35,10 @@ InventoryNetwork.SwapItem.listen(function(data, player: Player)
 	local itemA = inventory:GetItemAtIndex(data.indexA)
 	local itemB = inventory:GetItemAtIndex(data.indexB)
 
+	if itemB and itemA then
+		itemA = itemB:MergeItem(itemA)
+	end
+
 	inventory:SetItemAtIndex(itemA, data.indexB)
 	inventory:SetItemAtIndex(itemB, data.indexA)
 

@@ -20,7 +20,7 @@ local cmd: CmdrUtils.CMD = {
 			Default = Vector3.zero,
 		},
 		{
-			Type = "number",
+			Type = "blocks",
 			Name = "Block",
 			Description = "The id for the block",
 			Default = 0,

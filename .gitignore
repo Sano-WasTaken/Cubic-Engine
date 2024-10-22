@@ -5,4 +5,5 @@ selene.toml
 wally.lock
 sourcemap.json
 src/ServerScriptService/Other
+"HUB TS"
 .vscode

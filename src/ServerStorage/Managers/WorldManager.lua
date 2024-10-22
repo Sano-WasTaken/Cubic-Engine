@@ -1,7 +1,9 @@
 --local Debris = game:GetService("Debris")
+local Debris = game:GetService("Debris")
 local HttpService = game:GetService("HttpService")
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 --local RunService = game:GetService("RunService")
 local Waiter = require(ReplicatedStorage.Classes.Waiter)
 local DatabaseManager = require(script.Parent.DatabaseManager)
@@ -268,11 +270,55 @@ function WorldManager:GetNeighbors(x: number, y: number, z: number): { [Vector3]
 	return neighbors
 end
 
+local function getCardinalDirection(direction: Vector3): Block.Facing?
+	local north = Vector3.new(0, 0, 1)
+	local south = Vector3.new(0, 0, -1)
+	local east = Vector3.new(1, 0, 0)
+	local west = Vector3.new(-1, 0, 0)
+
+	-- Comparer avec les directions cardinales en utilisant des produits scalaires
+	local dotNorth = direction:Dot(north)
+	local dotSouth = direction:Dot(south)
+	local dotEast = direction:Dot(east)
+	local dotWest = direction:Dot(west)
+
+	-- Trouver la direction la plus proche
+	local maxDot = math.max(dotNorth, dotSouth, dotEast, dotWest)
+
+	local facing
+
+	if maxDot == dotNorth then
+		facing = "NORTH"
+	elseif maxDot == dotSouth then
+		facing = "SOUTH"
+	elseif maxDot == dotEast then
+		facing = "EAST"
+	elseif maxDot == dotWest then
+		facing = "WEST"
+	end
+
+	return facing
+end
+
+local function getInverted(mouseLocalY: number, normal: Vector3): boolean
+	local inverted = false
+
+	inverted = mouseLocalY > 0
+
+	if normal == Vector3.new(0, -1, 0) then
+		inverted = true
+	elseif normal == Vector3.new(0, 1, 0) then
+		inverted = false
+	end
+
+	return inverted
+end
+
 function WorldManager:LocalRaycastV2(
 	origin: Vector3,
 	direction: Vector3,
 	range: number
-): { Block: Block.IBlock?, Normal: Vector3 }?
+): { Block: Block.IBlock?, Normal: Vector3, Facing: Block.Facing, Inverted: boolean }?
 	local params = RaycastParams.new()
 
 	params.FilterDescendantsInstances = { workspace:FindFirstChild("RenderFolder"):GetChildren() }
@@ -281,14 +327,18 @@ function WorldManager:LocalRaycastV2(
 	local raycastResult = workspace:Raycast(origin, direction * range, params)
 
 	if raycastResult and raycastResult.Instance then
-		local position: Vector3 = raycastResult.Instance.Position / 3
-		local normal = raycastResult.Normal
+		local position: Vector3 = (raycastResult.Instance.Position / 3):Floor()
+		local normal = (raycastResult.Normal + Vector3.new(1e-4, 1e-4, 1e-4)):Floor()
+
+		local mousePos = CFrame.new(position):PointToObjectSpace(raycastResult.Position / 3)
 
 		local block = WorldManager:GetBlock(position.X, position.Y, position.Z)
 
 		return {
 			Block = block,
 			Normal = normal,
+			Facing = getCardinalDirection(direction),
+			Inverted = getInverted(mousePos.Y, normal),
 		}
 	end
 
@@ -299,47 +349,34 @@ end
 	origin: Vector3,
 	direction: Vector3,
 	range: number,
-	listId: { number }?,
-	isWhiteList: boolean?
+	listId: { number }?
 ): { Block: Block.IBlock, Distance: number }?
 	listId = listId or {}
 
 	local DEBUG = RunService:IsStudio()
 
-	local epsilon = 1e-8
+	local tileSize = 1
+	local blockSize = 3
+	local halfBlockSize = blockSize / 2
 
-	local tileX, tileY, tileZ = math.floor(origin.X), math.floor(origin.Y), math.floor(origin.Z)
+	local pos = (origin / blockSize)
+	local dir = direction.Unit
 
-	local function step(dir: number)
-		local bound = 0
+	local stepX = (dir.X > 0) and 1 or -1
+	local stepY = (dir.Y > 0) and 1 or -1
+	local stepZ = (dir.Z > 0) and 1 or -1
 
-		if dir ~= 0 then
-			bound = dir > 0 and 1 or -1
-		end
+	local tMaxX = (dir.X > 0) and (math.ceil(pos.X) - pos.X) or (pos.X - math.floor(pos.X))
+	local tMaxY = (dir.Y > 0) and (math.ceil(pos.Y) - pos.Y) or (pos.Y - math.floor(pos.Y))
+	local tMaxZ = (dir.Z > 0) and (math.ceil(pos.Z) - pos.Z) or (pos.Z - math.floor(pos.Z))
 
-		return bound
-	end
+	tMaxX = tMaxX / math.abs(dir.X)
+	tMaxY = tMaxY / math.abs(dir.Y)
+	tMaxZ = tMaxZ / math.abs(dir.Z)
 
-	local stepX = step(direction.X)
-	local stepY = step(direction.Y)
-	local stepZ = step(direction.Z)
-
-	print(stepX, stepY, stepZ)
-
-	-- Calcul de la distance jusqu'à la prochaine frontière de tuile
-	local next_boundaryX = (direction.X > 0 and (tileX + 1) or tileX) - origin.X
-	local next_boundaryY = (direction.Y > 0 and (tileY + 1) or tileY) - origin.Y
-	local next_boundaryZ = (direction.Z > 0 and (tileZ + 1) or tileZ) - origin.Z
-
-	-- Calcul de tMax pour chaque axe
-	local tMaxX = (direction.X ~= 0) and (next_boundaryX / direction.X) or math.huge
-	local tMaxY = (direction.Y ~= 0) and (next_boundaryY / direction.Y) or math.huge
-	local tMaxZ = (direction.Z ~= 0) and (next_boundaryZ / direction.Z) or math.huge
-
-	-- Calcul de tDelta : distance à parcourir sur chaque axe pour passer une tuile
-	local tDeltaX = (direction.X ~= 0) and math.abs(1 / direction.X) or math.huge
-	local tDeltaY = (direction.Y ~= 0) and math.abs(1 / direction.Y) or math.huge
-	local tDeltaZ = (direction.Z ~= 0) and math.abs(1 / direction.Z) or math.huge
+	local tDeltaX = blockSize / math.abs(dir.X)
+	local tDeltaY = blockSize / math.abs(dir.Y)
+	local tDeltaZ = blockSize / math.abs(dir.Z)
 
 	local distanceTravelled = 0
 
@@ -357,31 +394,46 @@ end
 		part.CanQuery = false
 
 		Debris:AddItem(part, 5)
+
+		return part
 	end
 
 	while distanceTravelled < range do
-		local block = WorldManager:GetBlock(tileX, tileY, tileZ)
+		local vec = pos:Floor()
 
-		if block then
-			return { Block = block, Distance = distanceTravelled }
-		end
+		createPart(vec.X, vec.Y, vec.Z)
 
-		if DEBUG then
-			createPart(tileX, tileY, tileZ)
-		end
-
-		if tMaxX + epsilon < tMaxY and tMaxX + epsilon < tMaxZ then
-			tileX += stepX
+		if tMaxX < tMaxY and tMaxX < tMaxZ then
+			pos = pos + Vector3.new(stepX, 0, 0)
 			distanceTravelled = tMaxX
 			tMaxX += tDeltaX
-		elseif tMaxY + epsilon < tMaxZ then
-			tileY += stepY
+		elseif tMaxY < tMaxZ then
+			pos = pos + Vector3.new(0, stepY, 0)
 			distanceTravelled = tMaxY
 			tMaxY += tDeltaY
 		else
-			tileZ += stepZ
+			pos = pos + Vector3.new(0, 0, stepZ)
 			distanceTravelled = tMaxZ
 			tMaxZ += tDeltaZ
+		end
+
+		local vec = pos:Floor()
+
+		--local relative = (pos % blockSize) - Vector3.new(halfBlockSize, halfBlockSize, halfBlockSize)
+
+		local block = WorldManager:GetBlock(vec.X, vec.Y, vec.Z)
+
+		if block then
+			local highlight = Instance.new("Highlight")
+
+			highlight.FillColor = Color3.new(1, 0, 0)
+
+			local part = createPart(vec.X, vec.Y, vec.Z)
+
+			highlight.Parent = part
+			highlight.Adornee = part
+
+			return { Block = block, Distance = distanceTravelled }
 		end
 	end
 
@@ -410,7 +462,13 @@ function WorldManager:DecompressChunks(compressedChunks: { DatabaseManager.chunk
 
 		chunks[cx] = chunks[cx] or {}
 
-		chunk = Chunk.new(cx, cy, chunk.chunk, chunk.tileEntities)
+		local e = chunk.tileEntities
+
+		if type(e) == "buffer" then
+			e = HttpService:JSONDecode(buffer.readstring(e, 0, buffer.len(e)))
+		end
+
+		chunk = Chunk.new(cx, cy, chunk.chunk, e, chunk.states)
 
 		chunks[cx][cy] = chunk
 	end
@@ -428,8 +486,13 @@ function WorldManager:GetCompressedChunks(): { DatabaseManager.chunk }
 
 		local cx, cy = chunk:GetPosition()
 
-		local formatChunk: DatabaseManager.chunk =
-			{ chunk = chunk:Compress(), tileEntities = chunk.entity, cx = cx, cy = cy }
+		local formatChunk: DatabaseManager.chunk = {
+			chunk = chunk:Compress(),
+			tileEntities = buffer.fromstring(HttpService:JSONEncode(chunk.entity)),
+			cx = cx,
+			cy = cy,
+			states = chunk.states,
+		}
 
 		table.insert(compressedChunk, formatChunk)
 	end

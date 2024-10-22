@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local InventoryNetwork = require(ReplicatedStorage.Networks.InventoryNetwork)
+local DraggingFrameController = require(ReplicatedStorage.UI.Controllers.DraggingFrameController)
 local HotbarController = require(ReplicatedStorage.UI.Controllers.HotbarController)
 local InventoryController = require(ReplicatedStorage.UI.Controllers.InventoryController)
 
@@ -55,5 +56,10 @@ UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: 
 	if input.KeyCode == Enum.KeyCode.E then
 		InventoryController:Toggle()
 		HotbarController:Toggle()
+	end
+
+	if not InventoryController:IsVisible() then
+		DraggingFrameController:Set(nil)
+		InventoryController.DraggedSlot:set(0)
 	end
 end)

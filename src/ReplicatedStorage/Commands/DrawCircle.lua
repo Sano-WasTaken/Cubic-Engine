@@ -18,7 +18,7 @@ local cmd: CmdrUtils.CMD = {
 			Description = "The provided position.",
 		},
 		{
-			Type = "number",
+			Type = "blocks",
 			Name = "Block",
 			Description = "The id for the block",
 			--Default = 0,

@@ -5,9 +5,10 @@ local InventoryNetwork = require(ReplicatedStorage.Networks.InventoryNetwork)
 local Item = require(ServerStorage.Components.Item)
 local PlayerInventoryGetter = require(ServerStorage.Managers.PlayerInventoryGetter)
 
-return function(context, id: number, amount: number)
-	if ItemEnum[id] ~= nil then
-		local item = Item:createItem(id, amount)
+return function(context, name: string, amount: number)
+	--print(name, ItemEnum[name])
+	if ItemEnum[name] ~= nil then
+		local item = Item:createItem(ItemEnum[name], amount)
 
 		local inventory = PlayerInventoryGetter.getInventory(context.Executor)
 
@@ -18,5 +19,5 @@ return function(context, id: number, amount: number)
 		return "Give success."
 	end
 
-	return "Invalid id."
+	return "Invalid name."
 end

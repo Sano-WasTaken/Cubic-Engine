@@ -1,16 +1,18 @@
 local LootTable = {}
 
-export type Item = { id: number, min: number, max: number, chance: number? }
+export type LootItem = { id: number, min: number?, max: number?, chance: number? }
 export type LootTable = {
-	Items: { Item },
+	Items: { LootItem },
 }
 
 local function new(lootTable: LootTable?)
 	return setmetatable(lootTable or { Items = {} }, { __index = LootTable })
 end
 
-function LootTable:SetItem(item: Item)
+function LootTable:SetItem(item: LootItem)
 	table.insert(self.Items, item)
+
+	return self
 end
 
 function LootTable:GetSumOfChance()
@@ -20,7 +22,7 @@ function LootTable:GetSumOfChance()
 		return
 	end
 
-	for _, item: Item in self.Items do
+	for _, item: LootItem in self.Items do
 		if item.chance then
 			sum += item.chance
 		end
@@ -42,20 +44,20 @@ function LootTable:CalculateItems()
 	local n = random:NextInteger(1, sumOfChance or 0)
 	random:Shuffle(self.Items)
 
-	for _, item: Item in self.Items do
+	for _, item: LootItem in self.Items do
 		if sumOfChance then
 			if n > item.chance then
 				n -= item.chance
 			else
 				table.insert(items, {
-					id = item.id,
-					amount = random:NextInteger(item.min, item.max),
+					ID = item.id,
+					Amount = random:NextInteger(item.min or 1, item.max or 1),
 				})
 			end
 		else
 			table.insert(items, {
-				id = item.id,
-				amount = random:NextInteger(item.min, item.max),
+				ID = item.id,
+				Amount = random:NextInteger(item.min or 1, item.max or 1),
 			})
 		end
 	end

@@ -39,6 +39,10 @@ function BaseController.Invisible(self: BaseScope)
 	self.Instance.Parent = nil
 end
 
+function BaseController.IsVisible(self: BaseScope): boolean
+	return self.Instance.Parent ~= nil
+end
+
 export type BaseScope = typeof(BaseController) & Fusion.Scope<typeof(Fusion)>
 
 return function<T>(Controller: T & { [string]: any }): T & BaseScope & { Scale: typeof(ScaleController) }

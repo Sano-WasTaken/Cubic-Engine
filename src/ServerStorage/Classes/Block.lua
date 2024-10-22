@@ -1,22 +1,39 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 
-local Facing = require(ServerStorage.Components.Facing)
+local BlockContent = require(ReplicatedStorage.Classes.BlockContent)
+local TileEntitiesManager = require(ServerStorage.Managers.TileEntitiesManager)
 local TileEntity = require(script.Parent.TileEntity)
 local ItemEnum = require(ReplicatedStorage.Enums.ItemEnum)
 local BlockEnum = require(ReplicatedStorage.Enums.BlockEnum)
+local BlockDataProvider = require(ReplicatedStorage.Providers.BlockDataProvider)
 
 local Block = {}
 
-export type IBlock = typeof(Block)
+export type IBlock = typeof(Block) & {
+	entity: {},
+	facing: number,
+	inverted: boolean,
+	active: boolean,
+	ID: number,
+}
 
 local function new(id: number, entity: {}?): IBlock
 	local self = setmetatable({
 		entity = entity,
+		facing = 0,
+		inverted = false,
+		active = false,
 		ID = id,
 	}, {
 		__index = Block,
 	})
+
+	local entityData = TileEntitiesManager.Provider:GetData(id)
+
+	if entity == nil and entityData then
+		self.entity = entityData:create()
+	end
 
 	return self :: IBlock
 end
@@ -41,36 +58,47 @@ function Block:GetEntity(): TileEntity.TileEntity?
 	return self.entity
 end
 
-function Block:SetFacing(facing: Facing.Facing): IBlock
-	local entity: TileEntity.TileEntity = self:GetEntity()
+export type Facing = "NORTH" | "SOUTH" | "EAST" | "WEST"
 
-	if entity then
-		local facingComp: Facing.FacingComponent? = entity:GetComponent("Facing") :: any
+local Facings = {
+	[0] = "NORTH", -- Basic facing
+	[1] = "SOUTH",
+	[2] = "EAST",
+	[3] = "WEST",
+}
 
-		if facingComp then
-			facingComp:SetFacing(facing)
-		else
-			warn("no facing !")
-		end
-	else
-		warn("no entity !")
+function Block:SetFacing(facing: Facing): IBlock
+	local content: BlockContent.BlockContent = self:GetContent()
+
+	if content.Faced then
+		local facingId = table.find(Facings, facing)
+
+		self.facing = facingId or 0
 	end
 
 	return self
 end
 
-function Block:GetFacing(): Facing.Facing
-	local entity: TileEntity.TileEntity = self:GetEntity()
+function Block:SetInverted(inverted: boolean): IBlock
+	local content: BlockContent.BlockContent = self:GetContent()
 
-	if entity then
-		local facing: Facing.FacingComponent? = entity:GetComponent("Facing") :: any
-
-		if facing then
-			return facing:GetFacing()
-		end
+	if content.Inverted then
+		self.inverted = inverted
 	end
 
-	return "NORTH"
+	return self
+end
+
+function Block:GetInverted(): boolean
+	return self.inverted
+end
+
+function Block:GetContent(): BlockContent.BlockContent
+	return BlockDataProvider:GetData(self.ID)
+end
+
+function Block:GetFacing(): Facing
+	return Facings[self.facing]
 end
 
 function Block:GetID(): number

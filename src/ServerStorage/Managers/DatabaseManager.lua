@@ -4,7 +4,7 @@ local Inventory = require(ServerStorage.Components.Inventory)
 --local MemoryStoreService = game:GetService("MemoryStoreService")
 
 --local Players = game:GetService("Players")
-local DATABASE_NAME = "Player_Database_PlayTesterV3"
+local DATABASE_NAME = "Player_Database_PlayTesterV4"
 
 local function waitForBudget(requestType: Enum.DataStoreRequestType)
 	repeat
